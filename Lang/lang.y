@@ -107,10 +107,10 @@ fun_decl : type fun;
 
 fun : fun_head fun_body
 
-fun_head : ID PO PF
+fun_head : ID PO PF {printf("define i32 @%s() {\nL0:\n", $1);}
 | ID PO param_list PF
 
-fun_body : AO block AF
+fun_body : AO block AF {printf("}\n");}
 
 type
 : typename pointer
@@ -131,8 +131,8 @@ pointer
 param_list: type ID vir param_list
 | type ID
 
-vlist: ID vir vlist
-  | ID;
+vlist: ID vir vlist {printf("\t %%%s = alloca i32\n", $1);}
+| ID {printf("\t %%%s = alloca i32\n", $1);};
 
 vir : VIR;
 
@@ -163,17 +163,17 @@ args : arglist
 arglist : ID VIR arglist
 | ID;
 
-aff : ID EQ exp PV {printf("%s = R%i;\n", $1,$3);};
+aff : ID EQ exp PV {printf("\t store i32 %%r%i, i32* %%%s\n", $3,$1);};
 
 ret : RETURN PV
-| RETURN exp PV
+| RETURN exp PV {printf("\t ret i32 %%r%i\n", $2);}
 
 cond :
 if bool_cond inst %prec UNA {printf("L%i: ",$1.one);}
 | if bool_cond inst else inst {printf("L%i: ",$1.two);}
 
 
-bool_cond : PO bool PF {printf("if !R%i goto L%i;\n",$2,$<lab>0.one);};
+ bool_cond : PO bool PF {printf("if !R%i goto L%i;\n",$2,$<lab>0.one);};
 	      // l'attribut du if est juste avant sur la pile.
 	      // on doit préciser son type parce que YACC ne fait l'anlyse permettant de le savoir.
 	      // Notez qu'on ne precise pas le type de $2
@@ -222,13 +222,13 @@ exp INF exp {$$ = new_reg(); printf("R%i = (R%i < R%i);\n", $$,$1,$3); }
 
 exp
 : MOINS exp %prec UNA {$$ = new_reg(); printf("R%i = - R%i;\n", $$,$2); }
-| exp PLUS exp {$$ = new_reg(); printf("R%i = R%i + R%i;\n", $$,$1,$3); }
+| exp PLUS exp {$$ = new_reg(); printf("\t %%r%i = add i32 %%r%i, %%r%i\n", $$,$1,$3); }
 | exp MOINS exp {$$ = new_reg(); printf("R%i = R%i - R%i;\n", $$,$1,$3); }
-| exp STAR exp {$$ = new_reg(); printf("R%i = R%i * R%i;\n", $$,$1,$3); }
-| exp DIV exp {$$ = new_reg(); printf("R%i = R%i / R%i;\n", $$,$1,$3); }
+| exp STAR exp {$$ = new_reg(); printf("\t %%r%i = mul i32 %%r%i, %%r%i\n", $$,$1,$3); }
+| exp DIV exp {$$ = new_reg(); printf("\t %%r%i = sdiv i32 %%r%i, %%r%i\n", $$,$1,$3); }
 | PO exp PF {$$=$2;}
 | ID {$$ = new_reg(); printf("R%i = %s;\n", $$,$1); }
-| CONSTANTI {$$ = new_reg(); printf("R%i = %i;\n", $$,$1); }
+| CONSTANTI {$$ = new_reg(); printf("\t %%r%i = add i32 %i, 0\n", $$,$1); }
 | CONSTANTF {$$ = new_reg(); printf("R%i = %f;\n", $$,$1); }
 | fun_app {$$ = new_reg(); printf("R%i = TODO\n", $$); }
 ;

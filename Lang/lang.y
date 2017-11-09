@@ -105,12 +105,12 @@ var_decl : type vlist;
 
 fun_decl : type fun;
 
-fun : fun_head fun_body
+fun : fun_head fun_body;
 
-fun_head : ID PO PF {printf("define i32 @%s() {\nL0:\n", $1);}
-| ID PO param_list PF
+fun_head : ID PO PF {printf("define i32 @%s() {\nL0:\n",$1);}
+| ID PO param_list PF;
 
-fun_body : AO block AF {printf("}\n");}
+fun_body : AO block AF {printf("}\n");};
 
 type
 : typename pointer
@@ -129,7 +129,7 @@ pointer
 ;
 
 param_list: type ID vir param_list
-| type ID
+| type ID;
 
 vlist: ID vir vlist {printf("\t %%%s = alloca i32\n", $1);}
 | ID {printf("\t %%%s = alloca i32\n", $1);};
@@ -166,11 +166,11 @@ arglist : ID VIR arglist
 aff : ID EQ exp PV {printf("\t store i32 %%r%i, i32* %%%s\n", $3,$1);};
 
 ret : RETURN PV
-| RETURN exp PV {printf("\t ret i32 %%r%i\n", $2);}
+| RETURN exp PV {printf("\t ret i32 %%r%i\n", $2);};
 
 cond :
 if bool_cond inst %prec UNA {printf("L%i: ",$1.one);}
-| if bool_cond inst else inst {printf("L%i: ",$1.two);}
+| if bool_cond inst else inst {printf("L%i: ",$1.two);};
 
 
  bool_cond : PO bool PF {printf("if !R%i goto L%i;\n",$2,$<lab>0.one);};

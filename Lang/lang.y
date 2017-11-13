@@ -1,7 +1,9 @@
 %{
 #include <stdio.h>
+#include <string.h>
 #include "utile.h"
 #include "Table_des_symboles.h"
+#include "conv_hex.h"
 
   void yyerror (char* s) {
     printf ("%s\n",s);
@@ -40,7 +42,7 @@ Un élement de A + B est  alors de la forme (t,v) avec t = 1 ou 2. La valeur de 
 si la valeur v est de type A  (lorsque t = 1) ou de type A (lorsque t = 2).
 
 Le type union ci-dessous fait (presque) la même chose pour le type attribut, le "typage" d'un
-attribut se faisant à l'utilisation par $<type>n. Example: $<sid>-3 indique que l'atrribut $-3
+attribut se faisant à l'utilisation par $<type>n. Exmple: $<sid>-3 indique que l'atrribut $-3
 sera lue comme un char * (le type de sid). */
 
 
@@ -78,6 +80,7 @@ sera lue comme un char * (le type de sid). */
 %nonassoc UNA    /* pseudo token pour assurer une priorite locale */
 %nonassoc ELSE
 
+%type <sid> typename /*type*/
 %type <reg> exp bool  /* attribut d’une expr = valeur entiere */
 %type <lab> if else
 
@@ -107,20 +110,20 @@ fun_decl : type fun;
 
 fun : fun_head fun_body;
 
-fun_head : ID PO PF {printf("define i32 @%s() {\nL0:\n",$1);}
+fun_head : ID PO PF {printf("define %s @%s() {\nL0:\n",$<sid>0, $1);}
 | ID PO param_list PF;
 
 fun_body : AO block AF {printf("}\n");};
 
 type
-: typename pointer
-| typename
+: typename pointer //{$$ = strcat($1, "*");} TODO : marche pas
+| typename {$$ = $1;}
 ;
 
 typename
-: INT
-| FLOAT
-| VOID
+: INT {$$ = "i32";}
+| FLOAT {$$ = "float";}
+| VOID {$$ = "";}
 ;
 
 pointer
@@ -229,7 +232,7 @@ exp
 | PO exp PF {$$=$2;}
 | ID {$$ = new_reg(); printf("R%i = %s;\n", $$,$1); }
 | CONSTANTI {$$ = new_reg(); printf("\t %%r%i = add i32 %i, 0\n", $$,$1); }
-| CONSTANTF {$$ = new_reg(); printf("R%i = %f;\n", $$,$1); }
+| CONSTANTF {$$ = new_reg(); printf("\t %%r%i = fadd float %s, %s \n", $$, float_to_hex($1), float_to_hex(0.0)); }
 | fun_app {$$ = new_reg(); printf("R%i = TODO\n", $$); }
 ;
 

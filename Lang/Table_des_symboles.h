@@ -19,20 +19,22 @@
 #include "Table_des_chaines.h"
 
 /* type of values stored with symbols */
-
 struct symb_value {
 	/* this can be changed and extended to handle more complex symbol values */
-	int int_value;
-	/* no change after this line */	
+  union {
+    int int_value;
+    float float_value;
+  };
+  	/* no change after this line */	
 };
 
 typedef struct symb_value symb_value_type;
 
 
 /* get the symbol value of symb_id from the symbol table */
-symb_value_type get_symbol_value(sid symb_id);
+enum type get_symbol_value(sid symb_id);
 
 /* set the value of symbol symb_id to value */
-symb_value_type set_symbol_value(sid symb_id,symb_value_type value);
+enum type set_symbol_value(sid symb_id, enum type symbole_type);
 
 #endif

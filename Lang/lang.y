@@ -31,7 +31,14 @@
     return result;
   }
 
-
+void operation_type (char * type_string, enum type op1, enum type op2) {
+  if( op1 == T_FLOAT || op2 == T_FLOAT) {
+    type_string = S_FLOAT;
+  }
+  else {
+    type_string = S_INT;
+  }
+}
 
 %}
 
@@ -52,6 +59,7 @@ sera lue comme un char * (le type de sid). */
   int reg;
   char * sid;
   label lab;
+  enum type t;
 }
 
 %token <n> CONSTANTI /* attribut d’une constante entière = int */
@@ -80,7 +88,7 @@ sera lue comme un char * (le type de sid). */
 %nonassoc UNA    /* pseudo token pour assurer une priorite locale */
 %nonassoc ELSE
 
-%type <sid> typename /*type*/
+%type <t> typename /*type*/
 %type <reg> exp bool  /* attribut d’une expr = valeur entiere */
 %type <lab> if else
 
@@ -110,20 +118,34 @@ fun_decl : type fun;
 
 fun : fun_head fun_body;
 
-fun_head : ID PO PF {printf("define %s @%s() {\nL0:\n",$<sid>0, $1);}
+fun_head : ID PO PF 
+{
+  char * type_string;
+  switch ($<t>0) {
+  case T_INT:
+    type_string = S_INT;
+    break;
+  case T_FLOAT:
+    type_string = S_FLOAT;
+    break;
+  default:
+    type_string = "";
+    break;
+  }
+printf("define %s @%s() {\nL0:\n",type_string, $1);}
 | ID PO param_list PF;
 
 fun_body : AO block AF {printf("}\n");};
 
 type
 : typename pointer //{$$ = strcat($1, "*");} TODO : marche pas
-| typename {$$ = $1;}
+| typename //{$$ = $1;}
 ;
 
 typename
-: INT {$$ = "i32";}
-| FLOAT {$$ = "float";}
-| VOID {$$ = "";}
+: INT {$$ = T_INT;}
+| FLOAT {$$ = T_FLOAT;}
+| VOID {$$ = T_VOID;}
 ;
 
 pointer
@@ -225,7 +247,14 @@ exp INF exp {$$ = new_reg(); printf("R%i = (R%i < R%i);\n", $$,$1,$3); }
 
 exp
 : MOINS exp %prec UNA {$$ = new_reg(); printf("R%i = - R%i;\n", $$,$2); }
-| exp PLUS exp {$$ = new_reg(); printf("\t %%r%i = add i32 %%r%i, %%r%i\n", $$,$1,$3); }
+| exp PLUS exp 
+{
+  $$ = new_reg(); 
+  char * type_string;
+  operation_type(type_string, $1, $3);
+  printf("%s\n", type_string);
+  printf("\t %%r%i = add %s %%r%i, %%r%i\n", type_string, $$, $1, $3); 
+}
 | exp MOINS exp {$$ = new_reg(); printf("R%i = R%i - R%i;\n", $$,$1,$3); }
 | exp STAR exp {$$ = new_reg(); printf("\t %%r%i = mul i32 %%r%i, %%r%i\n", $$,$1,$3); }
 | exp DIV exp {$$ = new_reg(); printf("\t %%r%i = sdiv i32 %%r%i, %%r%i\n", $$,$1,$3); }

@@ -11,26 +11,29 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+#include "utile.h"
+
 /* The storage structure is implemented as a linked chain */
 
 /* linked element def */
 
 typedef struct elem {
-	sid symbol_name;
-	symb_value_type symbol_value;
-	struct elem * next;
+  sid symbol_name;
+//symb_value_type symbol_type;
+  enum type symbol_type;
+  struct elem * next;
 } elem;
 
 /* linked chain initial element */
 static elem * storage=NULL;
 
 /* get the symbol value of symb_id from the symbol table */
-symb_value_type get_symbol_value(sid symb_id) {
+enum type get_symbol_type(sid symb_id) {
 	elem * tracker=storage;
 
 	/* look into the linked list for the symbol value */
 	while (tracker) {
-		if (tracker -> symbol_name == symb_id) return tracker -> symbol_value; 
+		if (tracker -> symbol_name == symb_id) return tracker -> symbol_type; 
 		tracker = tracker -> next;
 	}
     
@@ -40,7 +43,7 @@ symb_value_type get_symbol_value(sid symb_id) {
 };
 
 /* set the value of symbol symb_id to value */
-symb_value_type set_symbol_value(sid symb_id,symb_value_type value) {
+enum type set_symbol_type(sid symb_id, enum type value) {
 
 	elem * tracker;
 	
@@ -55,8 +58,8 @@ symb_value_type set_symbol_value(sid symb_id,symb_value_type value) {
 	tracker = storage;
 	while (tracker) {
 		if (tracker -> symbol_name == symb_id) {
-			tracker -> symbol_value = value;
-			return tracker -> symbol_value;
+			tracker -> symbol_type = value;
+			return tracker -> symbol_type;
 		}
 		tracker = tracker -> next;
 	}
@@ -65,9 +68,9 @@ symb_value_type set_symbol_value(sid symb_id,symb_value_type value) {
 	
 	tracker = malloc(sizeof(elem));
 	tracker -> symbol_name = symb_id;
-	tracker -> symbol_value = value;
+	tracker -> symbol_type = value;
 	tracker -> next = storage;
 	storage = tracker;
-	return storage -> symbol_value;
+	return storage -> symbol_type;
 }
 

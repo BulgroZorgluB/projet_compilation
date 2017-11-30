@@ -13,9 +13,9 @@ y.tab.c		:	lang.y
 			bison -d -v lang.y
 y.tab.o	        :       y.tab.c
 lex.yy.o	: 	lex.yy.c
-Table_des_chaines.o	:	Table_des_chaines.c 
-Table_des_symboles.o	:	Table_des_symboles.c
-prog		:	lex.yy.o y.tab.o Table_des_symboles.o Table_des_chaines.o
-			gcc  lex.yy.o y.tab.o Table_des_symboles.o Table_des_chaines.o conv_hex.o -o prog
+linked_list.o	:	linked_list.c
+symbol_table.o	:	symbol_table.c
+prog		:	lex.yy.o y.tab.o symbol_table.o linked_list.o
+					gcc  lex.yy.o y.tab.o symbol_table.o linked_list.o conv_hex.o -o prog
 clean		:	
 			rm -f 	lex.yy.c *.o y.tab.h y.tab.c prog *~ y.output

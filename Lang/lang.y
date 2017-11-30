@@ -2,8 +2,9 @@
 #include <stdio.h>
 #include <string.h>
 #include "utile.h"
-#include "Table_des_symboles.h"
+#include "symbol_table.h"
 #include "conv_hex.h"
+
 
   void yyerror (char* s) {
     printf ("%s\n",s);
@@ -12,7 +13,6 @@
   void yywrap () {
 
   }
-
 
   /* generation de numero de registre */
 
@@ -98,7 +98,9 @@ sera lue comme un char * (le type de sid). */
 
 %%
 
-prog : block;
+prog : init block;
+
+init: {/*create_table();*/};
 
 block:
 decl_list inst_list
@@ -253,7 +255,7 @@ exp
   char * type_string;
   operation_type(type_string, $1, $3);
   printf("%s\n", type_string);
-  printf("\t %%r%i = add %s %%r%i, %%r%i\n", type_string, $$, $1, $3); 
+  printf("\t %%r%i = add %s %%r%i, %%r%i\n", $$, type_string, $1, $3); 
 }
 | exp MOINS exp {$$ = new_reg(); printf("R%i = R%i - R%i;\n", $$,$1,$3); }
 | exp STAR exp {$$ = new_reg(); printf("\t %%r%i = mul i32 %%r%i, %%r%i\n", $$,$1,$3); }
@@ -269,5 +271,6 @@ exp
 
 %%
 int main () {
+
 return yyparse ();
 }

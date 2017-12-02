@@ -132,6 +132,7 @@ create_table();
   increment_depth_control();
 
   add_symbol(value[2]);
+  display_list();
   assert(search_symbol_in_bloc(value[1]) == 1);
   assert(search_symbol_in_bloc(value[2]) == 1);
 

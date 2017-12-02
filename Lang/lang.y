@@ -31,14 +31,59 @@
     return result;
   }
 
-void operation_type (char * type_string, enum type op1, enum type op2) {
-  if( op1 == T_FLOAT || op2 == T_FLOAT) {
-    type_string = S_FLOAT;
+ void add_register_to_table(int x, enum type type) {
+   char register_name[sizeof(int)];
+   sprintf(register_name, "%d",x);
+   add_symbol(create_elem(register_name, type));
+ }
+
+ enum type op_type(enum type op1, enum type op2) {
+   if( op1 == T_FLOAT || op2 == T_FLOAT) {
+     return T_FLOAT;
   }
   else {
-    type_string = S_INT;
+    return T_INT;
+  }
+ }
+
+ void operation_type(enum type op1, enum type op2, char **type_string, char **operation_name, char **operation_type_name) {
+   if(op_type(op1, op2) == T_FLOAT) {
+    *(type_string) = S_FLOAT;
+    *(operation_name) = operation_type_name[T_FLOAT];
+  }
+  else {
+    *(type_string) = S_INT;
+    *(operation_name) = operation_type_name[T_INT];
   }
 }
+
+  void printf_operation(int result, char* op1_name, char* op2_name, char ** operation_type_name, char * bool_operation) {
+    char * type_string;
+    char * operation_name;
+
+    operation_type(find_type_from_name(op1_name), find_type_from_name(op2_name), &type_string, &operation_name, operation_type_name); 
+
+    printf("\t %%r%i = %s %s %s %%r%s, %%r%s;\n", result, operation_name, bool_operation, type_string, op1_name, op2_name);
+  }
+
+
+ char * string_of_type(enum type t) {
+   char * type_string;
+   switch (t) {
+   case T_INT:
+     type_string = S_INT;
+     break;
+   case T_FLOAT:
+     type_string = S_FLOAT;
+     break;
+   default:
+     type_string = "";
+     break;
+   }
+   return type_string;
+ }
+
+
 
 %}
 
@@ -100,7 +145,7 @@ sera lue comme un char * (le type de sid). */
 
 prog : init block;
 
-init: {/*create_table();*/};
+init: {create_table();};
 
 block:
 decl_list inst_list
@@ -122,26 +167,16 @@ fun : fun_head fun_body;
 
 fun_head : ID PO PF 
 {
-  char * type_string;
-  switch ($<t>0) {
-  case T_INT:
-    type_string = S_INT;
-    break;
-  case T_FLOAT:
-    type_string = S_FLOAT;
-    break;
-  default:
-    type_string = "";
-    break;
-  }
-printf("define %s @%s() {\nL0:\n",type_string, $1);}
+  char * type_string = string_of_type($<t>0);
+  add_bloc(create_elem($1, $<t>0));
+  printf("define %s @%s() {\nL0:\n",type_string, $1);}
 | ID PO param_list PF;
 
 fun_body : AO block AF {printf("}\n");};
 
 type
 : typename pointer //{$$ = strcat($1, "*");} TODO : marche pas
-| typename //{$$ = $1;}
+| typename /*{$$ = $1;}*/
 ;
 
 typename
@@ -158,8 +193,14 @@ pointer
 param_list: type ID vir param_list
 | type ID;
 
-vlist: ID vir vlist {printf("\t %%%s = alloca i32\n", $1);}
-| ID {printf("\t %%%s = alloca i32\n", $1);};
+vlist: ID vir vlist {
+  char * type_string = string_of_type($<t>0);
+  printf("\t %%%s = alloca %s\n", $1, type_string); 
+  add_symbol(create_elem($1,$<t>0));};
+| ID {
+  char * type_string = string_of_type($<t>0);
+  printf("\t %%%s = alloca %s\n", $1, type_string);
+  add_symbol(create_elem($1,$<t>0));};
 
 vir : VIR;
 
@@ -190,17 +231,21 @@ args : arglist
 arglist : ID VIR arglist
 | ID;
 
-aff : ID EQ exp PV {printf("\t store i32 %%r%i, i32* %%%s\n", $3,$1);};
+aff : ID EQ exp PV {
+  char* string_type = string_of_type(find_type_from_name($1));
+  printf("\t store %s %%r%i, %s* %%%s\n",string_type, $3, string_type, $1);};
 
 ret : RETURN PV
-| RETURN exp PV {printf("\t ret i32 %%r%i\n", $2);};
+| RETURN exp PV {
+  char* string_type = string_of_type(type_last_bloc());
+  printf("\t ret %s %%r%i\n", string_type, $2);};
 
 cond :
 if bool_cond inst %prec UNA {printf("L%i: ",$1.one);}
 | if bool_cond inst else inst {printf("L%i: ",$1.two);};
 
 
- bool_cond : PO bool PF {printf("if !R%i goto L%i;\n",$2,$<lab>0.one);};
+ bool_cond : PO bool PF {printf("if i1 %%r%i, label %i, label \n",$2,$<lab>0.one);};
 	      // l'attribut du if est juste avant sur la pile.
 	      // on doit préciser son type parce que YACC ne fait l'anlyse permettant de le savoir.
 	      // Notez qu'on ne precise pas le type de $2
@@ -214,13 +259,54 @@ else : ELSE {$$ = $<lab>-2; printf("goto L%i;\n",$$.two); printf("L%i: ",$$.one)
 // ce n'est pas la facon dont on souhaiterais coder les calculs booleens... (voir en dessous)
 
 bool :
-exp INF exp {$$ = new_reg(); printf("R%i = (R%i < R%i);\n", $$,$1,$3); }
-| exp SUP exp {$$ = new_reg(); printf("R%i = (R%i > R%i);\n", $$,$1,$3); }
-| exp EQUAL exp {$$ = new_reg(); printf("R%i = (R%i == R%i);\n", $$,$1,$3); }
-| exp DIFF exp {$$ = new_reg(); printf("R%i = (R%i != R%i);\n", $$,$1,$3); }
-| bool AND bool {$$ = new_reg(); printf("R%i = R%i && R%i;\n", $$,$1,$3); }
-| bool OR bool {$$ = new_reg(); printf("R%i = R%i && R%i;\n", $$,$1,$3); }
-| NOT bool {$$ = new_reg(); printf("R%i = ! R%i;\n", $$,$2); }
+exp INF exp {
+  $$ = new_reg();
+  char op1_name[sizeof(int)];
+  sprintf(op1_name, "%d",$1);
+  char op2_name[sizeof(int)];
+  sprintf(op2_name, "%d",$3);
+  char * operation_type_name[TYPE_NUMBER] = {"", "icmp", "fcmp"};
+  printf_operation($$, op1_name, op2_name, operation_type_name, "slt"); }
+| exp SUP exp {
+  $$ = new_reg(); 
+  char op1_name[sizeof(int)];
+  sprintf(op1_name, "%d",$1);
+  char op2_name[sizeof(int)];
+  sprintf(op2_name, "%d",$3);
+  char * operation_type_name[TYPE_NUMBER] = {"", "icmp", "fcmp"};
+  printf_operation($$, op1_name, op2_name, operation_type_name, "sgt"); }
+| exp EQUAL exp {
+  $$ = new_reg(); 
+  char op1_name[sizeof(int)];
+  sprintf(op1_name, "%d",$1);
+  char op2_name[sizeof(int)];
+  sprintf(op2_name, "%d",$3);
+  char * operation_type_name[TYPE_NUMBER] = {"", "icmp", "fcmp"};
+  printf_operation($$, op1_name, op2_name, operation_type_name, "eq"); }
+| exp DIFF exp {
+  $$ = new_reg();
+  char op1_name[sizeof(int)];
+  sprintf(op1_name, "%d",$1);
+  char op2_name[sizeof(int)];
+  sprintf(op2_name, "%d",$3);
+  char * operation_type_name[TYPE_NUMBER] = {"", "icmp", "fcmp"};
+  printf_operation($$, op1_name, op2_name, operation_type_name, "ne"); }
+| bool AND bool {
+  $$ = new_reg(); 
+  char op1_name[sizeof(int)];
+  sprintf(op1_name, "%d",$1);
+  char op2_name[sizeof(int)];
+  sprintf(op2_name, "%d",$3);
+  char * operation_type_name[TYPE_NUMBER] = {"", "icmp", "fcmp"};
+  printf_operation($$, op1_name, op2_name, operation_type_name, "ne"); }
+| bool OR bool {$$ = new_reg(); 
+  char op1_name[sizeof(int)];
+  sprintf(op1_name, "%d",$1);
+  char op2_name[sizeof(int)];
+  sprintf(op2_name, "%d",$3);
+  char * operation_type_name[TYPE_NUMBER] = {"", "icmp", "fcmp"};
+  printf_operation($$, op1_name, op2_name, operation_type_name, "ne"); }
+| NOT bool {$$ = new_reg(); printf("\t %%r%i = ! R%i;\n", $$,$2); }
 | PO bool PF{$$ = $2;};
 
 // Comment faire à la place une évaluation "paresseuse" des booléens ?
@@ -249,21 +335,56 @@ exp INF exp {$$ = new_reg(); printf("R%i = (R%i < R%i);\n", $$,$1,$3); }
 
 exp
 : MOINS exp %prec UNA {$$ = new_reg(); printf("R%i = - R%i;\n", $$,$2); }
-| exp PLUS exp 
-{
+| exp PLUS exp {
   $$ = new_reg(); 
-  char * type_string;
-  operation_type(type_string, $1, $3);
-  printf("%s\n", type_string);
-  printf("\t %%r%i = add %s %%r%i, %%r%i\n", $$, type_string, $1, $3); 
-}
-| exp MOINS exp {$$ = new_reg(); printf("R%i = R%i - R%i;\n", $$,$1,$3); }
-| exp STAR exp {$$ = new_reg(); printf("\t %%r%i = mul i32 %%r%i, %%r%i\n", $$,$1,$3); }
-| exp DIV exp {$$ = new_reg(); printf("\t %%r%i = sdiv i32 %%r%i, %%r%i\n", $$,$1,$3); }
+  char op1_name[sizeof(int)];
+  sprintf(op1_name, "%d",$1);
+  char op2_name[sizeof(int)];
+  sprintf(op2_name, "%d",$3);
+  add_register_to_table($$, op_type(find_type_from_name(op1_name), find_type_from_name(op2_name)));
+  char * operation_type_name[TYPE_NUMBER] = {"", "add", "fadd"};
+  printf_operation($$, op1_name, op2_name, operation_type_name, ""); }
+
+| exp MOINS exp {
+  $$ = new_reg(); 
+  char op1_name[sizeof(int)];
+  sprintf(op1_name, "%d",$1);
+  char op2_name[sizeof(int)];
+  sprintf(op2_name, "%d",$3);
+  add_register_to_table($$, op_type(find_type_from_name(op1_name), find_type_from_name(op2_name)));
+  char * operation_type_name[TYPE_NUMBER] = {"", "sub", "fsub"};
+  printf_operation($$, op1_name, op2_name, operation_type_name, ""); }
+
+| exp STAR exp {
+  $$ = new_reg(); 
+  char op1_name[sizeof(int)];
+  sprintf(op1_name, "%d",$1);
+  char op2_name[sizeof(int)];
+  sprintf(op2_name, "%d",$3);
+  add_register_to_table($$, op_type(find_type_from_name(op1_name), find_type_from_name(op2_name)));
+  char * operation_type_name[TYPE_NUMBER] = {"", "mul", "fmul"};
+  printf_operation($$, op1_name, op2_name, operation_type_name, ""); }
+
+| exp DIV exp {
+  $$ = new_reg(); 
+  char op1_name[sizeof(int)];
+  sprintf(op1_name, "%d",$1);
+  char op2_name[sizeof(int)];
+  sprintf(op2_name, "%d",$3);
+  add_register_to_table($$, op_type(find_type_from_name(op1_name), find_type_from_name(op2_name)));
+  char * operation_type_name[TYPE_NUMBER] = {"", "div", "fdiv"};
+  printf_operation($$, op1_name, op2_name, operation_type_name, ""); }
+
 | PO exp PF {$$=$2;}
-| ID {$$ = new_reg(); printf("R%i = %s;\n", $$,$1); }
-| CONSTANTI {$$ = new_reg(); printf("\t %%r%i = add i32 %i, 0\n", $$,$1); }
-| CONSTANTF {$$ = new_reg(); printf("\t %%r%i = fadd float %s, %s \n", $$, float_to_hex($1), float_to_hex(0.0)); }
+| ID {$$ = new_reg();
+  char * type_string = string_of_type(find_type_from_name($1));
+  printf("\t %%r%i = load %s, %s* %%%s\n", $$, type_string, type_string, $1); }
+| CONSTANTI {$$ = new_reg(); 
+  add_register_to_table($$, T_INT);
+  printf("\t %%r%i = add i32 %i, 0\n", $$,$1); }
+| CONSTANTF {$$ = new_reg();
+  add_register_to_table($$, T_FLOAT);
+  printf("\t %%r%i = fadd float %s, %s \n", $$, float_to_hex($1), float_to_hex(0.0)); }
 | fun_app {$$ = new_reg(); printf("R%i = TODO\n", $$); }
 ;
 

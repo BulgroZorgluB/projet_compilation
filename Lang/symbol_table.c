@@ -75,6 +75,12 @@ int search_symbol_in_bloc(elem x) {
   return 1;
 }
 
+//elem symbolname is equal to "" if nothing was found
+enum type find_type_from_name(sid symbol_name) {
+  elem symbol = search_elem_until_end(table->pointer_bloc[table->depth_bloc - 1 - table->depth_control], symbol_name);
+  return symbol.symbol_type;
+}
+
 elem create_elem(sid symbol_name, enum type symbol_type) {
   elem new_elem;
   new_elem.symbol_name = symbol_name;
@@ -88,4 +94,8 @@ void increment_depth_control() {
 
 void decrement_depth_control() {
   table->depth_control--;
+}
+
+enum type type_last_bloc() {
+  return (((table->pointer_bloc[table->depth_bloc - 1 - table->depth_control])->value).symbol_type);
 }

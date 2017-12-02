@@ -23,11 +23,13 @@ void add_symbol(elem new_elem);
 
 void remove_symbol(elem rm_elem);
 
-void add_bloc();
+void add_bloc(elem new_elem);
 
 void remove_bloc();
 
 int search_symbol_in_bloc(elem x);
+
+enum type find_type_from_name(sid symbol_name);
 
 elem create_elem(sid symbol_name, enum type symbol_type);
 
@@ -35,7 +37,7 @@ void increment_depth_control();
 
 void decrement_depth_control();
 
-
+enum type type_last_bloc();
 
 
 

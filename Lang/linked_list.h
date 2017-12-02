@@ -34,6 +34,8 @@ void remove_until_end(struct linked_list* cell);
 
 struct linked_list* search_until_end(struct linked_list* start, elem value);
 
+elem search_elem_until_end (struct linked_list* start, sid symbol_name);
+
 void set_value (struct linked_list* cell, elem value);
 
 int cmp_value (elem e, elem v);
@@ -42,6 +44,6 @@ int cmp_symbol_name(char * name_e, char * name_v);
 /*
 void remove_value (struct linked_list* cell);
 */
-
+void display_list();
 
 #endif //_LINKED_LIST_H

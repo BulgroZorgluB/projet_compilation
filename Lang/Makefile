@@ -2,7 +2,7 @@ CFLAGS += -g
 
 all		:	conv_hex.o y.tab.h lex.yy.c y.tab.c prog
 
-conv_hex.o 	:
+conv_hex.o 	:       
 			gcc -std=c99 -c conv_hex.c
 
 y.tab.h         :       lang.y

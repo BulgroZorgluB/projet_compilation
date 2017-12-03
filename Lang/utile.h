@@ -10,11 +10,18 @@
 #define S_BOOL_INT "icmp"
 #define S_BOOL_FLOAT "fcmp"
 
+enum type {T_VOID, T_INT, T_FLOAT};
+
+typedef struct {
+  int reg_id;
+  enum type reg_type;
+} registre;
+
 typedef struct {
   int one;
   int two;
 } label;
 
-enum type {T_VOID, T_INT, T_FLOAT};
+
 
 #endif

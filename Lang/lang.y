@@ -6,6 +6,7 @@
 #include "conv_hex.h"
 
   static int label_n = 0;
+  static int loop_type = 0;
 
   void yyerror (char* s) {
     printf ("%s\n",s);
@@ -41,8 +42,43 @@
     return result;
   }
 
- enum type op_type(enum type op1, enum type op2) {
-   if( op1 == T_FLOAT || op2 == T_FLOAT) {
+  void change_loop_type() {
+    loop_type++;
+  }
+
+  int get_loop_type() {
+    if( loop_type % 2 == 0) {
+      return 1;
+    }
+    return 0;
+  }
+  
+  void convert_int_to_float(int reg_id) {
+    printf("\t sitofp %s %%r%i to %s\n", S_INT, reg_id, S_FLOAT);
+  }
+  void convert_float_to_int(int reg_id) {
+    printf("\t fptosi %s %%r%i to %s\n", S_FLOAT, reg_id, S_INT);
+  }
+
+  void convert_to_function_type(enum type f_type, registre exp) {
+    if(f_type != exp.reg_type) {
+      if(exp.reg_type == T_INT) {
+	convert_int_to_float(exp.reg_id);
+      }
+      else {
+	convert_float_to_int(exp.reg_id);
+      }
+    }
+  }
+
+ enum type op_type(registre op1, registre op2) {
+   if( op1.reg_type == T_FLOAT || op2.reg_type == T_FLOAT) {
+     if (op1.reg_type == T_FLOAT) {
+       convert_int_to_float(op2.reg_id);
+     }
+     else if (op2.reg_type == T_FLOAT) {
+       convert_int_to_float(op1.reg_id);
+     }
      return T_FLOAT;
   }
   else {
@@ -50,8 +86,8 @@
   }
  }
 
- void operation_type(enum type op1, enum type op2, char **type_string, char **operation_name, char **operation_type_name) {
-   if(op_type(op1, op2) == T_FLOAT) {
+ void operation_type(registre result, registre op1, registre op2, char **type_string, char **operation_name, char **operation_type_name) {
+   if(result.reg_type == T_FLOAT) {
     *(type_string) = S_FLOAT;
     *(operation_name) = operation_type_name[T_FLOAT];
   }
@@ -61,13 +97,13 @@
   }
 }
 
-  void printf_operation(int result, registre op1, registre op2, char ** operation_type_name, char * bool_operation) {
+  void printf_operation(registre result, registre op1, registre op2, char ** operation_type_name, char * bool_operation) {
     char * type_string;
     char * operation_name;
 
-    operation_type(op1.reg_type, op2.reg_type, &type_string, &operation_name, operation_type_name); 
+    operation_type(result, op1, op2, &type_string, &operation_name, operation_type_name); 
     
-    printf("\t %%r%i = %s %s%s %%r%d, %%r%d\n", result, operation_name, bool_operation, type_string, op1.reg_id, op2.reg_id);
+    printf("\t %%r%i = %s %s%s %%r%d, %%r%d\n", result.reg_id, operation_name, bool_operation, type_string, op1.reg_id, op2.reg_id);
   }
 
 
@@ -139,7 +175,7 @@ sera lue comme un char * (le type de sid). */
 
 %type <t> typename /*type*/
 %type <reg> exp bool  /* attribut d’une expr = valeur entiere */
-%type <lab> if else bool_cond while
+%type <lab> else while do bool_cond
 
 %start prog
 
@@ -224,15 +260,29 @@ exp PV
 | ret
 | PV;
 
-loop : while bool_cond DO AO block AF { printf("\t br label %%L%i\n", $1.one);
+loop : while bool_cond do AO block AF { printf("\t br label %%L%i\n", $1.one);
     printf("L%i: \n", $2.two);}
-| DO AO block AF WHILE PO exp PF PV
+| do AO block AF while bool_cond PV
 ;
 
-while : WHILE {$$ = new_simple_label();
-  printf("\t br label %%L%i \n", $$.one);
-  printf("L%i: \n", $$ .one);}
-;
+ while : WHILE {
+   if( get_loop_type()) { 
+    $$ = new_simple_label();
+    printf("\t br label %%L%i \n", $$.one);
+    printf("L%i: \n", $$ .one);}
+   change_loop_type();
+};
+
+do : DO {
+  if( get_loop_type()) {
+    $$ = new_simple_label();
+    printf("\t br label %%L%i \n", $$.one);
+    printf("L%i: \n", $$.one);
+  }
+  change_loop_type();
+     };
+
+       
 fun_app : ID PO args PF;
 
 args : arglist
@@ -247,7 +297,9 @@ aff : ID EQ exp PV {
 
 ret : RETURN PV
 | RETURN exp PV {
-  char* string_type = string_of_type(type_last_bloc());
+  enum type return_type = type_last_bloc();
+  convert_to_function_type(return_type, $2);
+  char* string_type = string_of_type(return_type);
   printf("\t ret %s %%r%i\n", string_type, $2.reg_id);};
 
 cond :
@@ -256,14 +308,29 @@ if bool_cond inst %prec UNA {printf("L%i:\n",$2.two);}
 
 
 bool_cond : PO bool PF {
-  $$ = new_double_label();
-  printf("\t br i1 %%r%i, label %%L%i, label %%L%i\n", $2.reg_id, $$.one, $$.two);
-  printf("L%i:\n", $$.one);};
+  int label_true;
+  int label_false;
+  int label_displayed;
+  if(!get_loop_type()) {
+    $$ = new_double_label(); 
+    label_true = $$.one;
+    label_false = $$.two;
+    label_displayed = label_true;
+  }
+  else {
+    $$ = new_simple_label();
+    label_true = $<lab>0.one;
+    label_false = $$.one;
+    label_displayed = label_false;
+  }
+  printf("\t br i1 %%r%i, label %%L%i, label %%L%i\n", $2.reg_id,label_true, label_false);
+  printf("L%i:\n", label_displayed);
+};
 	      // l'attribut du if est juste avant sur la pile.
 	      // on doit préciser son type parce que YACC ne fait l'anlyse permettant de le savoir.
 	      // Notez qu'on ne precise pas le type de $2
 
-if : IF {/*$$ = new_double_label();*/};
+  if : IF 
 
  else : ELSE {
    $$ = new_simple_label()/*$<lab>-2*/; printf("\t br label %%L%i;\n",$$.one); printf("L%i:\n",($<lab>-1).two); };
@@ -274,28 +341,28 @@ if : IF {/*$$ = new_double_label();*/};
 
 bool :
 exp INF exp {
-  $$ = new_reg(op_type($1.reg_type, $3.reg_type));
+  $$ = new_reg(op_type($1, $3));
   char * operation_type_name[TYPE_NUMBER] = {"", "icmp", "fcmp"};
-  printf_operation($$.reg_id, $1, $3, operation_type_name, "slt "); }
+  printf_operation($$, $1, $3, operation_type_name, "slt "); }
 | exp SUP exp {
-  $$ = new_reg(op_type($1.reg_type, $3.reg_type)); 
+  $$ = new_reg(op_type($1, $3)); 
   char * operation_type_name[TYPE_NUMBER] = {"", "icmp", "fcmp"};
-  printf_operation($$.reg_id, $1, $3, operation_type_name, "sgt "); }
+  printf_operation($$, $1, $3, operation_type_name, "sgt "); }
 | exp EQUAL exp {
-  $$ = new_reg(op_type($1.reg_type, $3.reg_type)); 
+  $$ = new_reg(op_type($1, $3)); 
   char * operation_type_name[TYPE_NUMBER] = {"", "icmp", "fcmp"};
-  printf_operation($$.reg_id, $1, $3, operation_type_name, "eq "); }
+  printf_operation($$, $1, $3, operation_type_name, "eq "); }
 | exp DIFF exp {
-  $$ = new_reg(op_type($1.reg_type, $3.reg_type));
+  $$ = new_reg(op_type($1, $3));
   char * operation_type_name[TYPE_NUMBER] = {"", "icmp", "fcmp"};
-  printf_operation($$.reg_id, $1, $3, operation_type_name, "ne "); }
+  printf_operation($$, $1, $3, operation_type_name, "ne "); }
 | bool AND bool {
-  $$ = new_reg(op_type($1.reg_type, $3.reg_type)); 
+  $$ = new_reg(op_type($1, $3)); 
   char * operation_type_name[TYPE_NUMBER] = {"", "icmp", "fcmp"};
-  printf_operation($$.reg_id, $1, $3, operation_type_name, "ne"); }
-| bool OR bool {$$ = new_reg(op_type($1.reg_type, $3.reg_type)); 
+  printf_operation($$, $1, $3, operation_type_name, "ne"); }
+| bool OR bool {$$ = new_reg(op_type($1, $3)); 
   char * operation_type_name[TYPE_NUMBER] = {"", "icmp", "fcmp"};
-  printf_operation($$.reg_id, $1, $3, operation_type_name, "ne"); }
+  printf_operation($$, $1, $3, operation_type_name, "ne"); }
 | NOT bool {$$ = new_reg($2.reg_type); printf("\t %%r%i = ! R%i;\n", $$.reg_id, $2.reg_id); }
 | PO bool PF{$$ = $2;};
 
@@ -326,24 +393,24 @@ exp INF exp {
 exp
 : MOINS exp %prec UNA {$$ = new_reg($2.reg_type); printf("R%i = - R%i;\n", $$.reg_id, $2.reg_id); }
 | exp PLUS exp {
-  $$ = new_reg(op_type($1.reg_type, $3.reg_type)); 
+  $$ = new_reg(op_type($1, $3)); 
   char * operation_type_name[TYPE_NUMBER] = {"", "add", "fadd"};
-  printf_operation($$.reg_id, $1, $3, operation_type_name, ""); }
+  printf_operation($$, $1, $3, operation_type_name, ""); }
 
 | exp MOINS exp {
-  $$ = new_reg(op_type($1.reg_type, $3.reg_type)); 
+  $$ = new_reg(op_type($1, $3)); 
   char * operation_type_name[TYPE_NUMBER] = {"", "sub", "fsub"};
-  printf_operation($$.reg_id, $1, $3, operation_type_name, ""); }
+  printf_operation($$, $1, $3, operation_type_name, ""); }
 
 | exp STAR exp {
-  $$ = new_reg(op_type($1.reg_type, $3.reg_type)); 
+  $$ = new_reg(op_type($1, $3)); 
   char * operation_type_name[TYPE_NUMBER] = {"", "mul", "fmul"};
-  printf_operation($$.reg_id, $1, $3, operation_type_name, ""); }
+  printf_operation($$, $1, $3, operation_type_name, ""); }
 
 | exp DIV exp {
-  $$ = new_reg(op_type($1.reg_type, $3.reg_type)); 
+  $$ = new_reg(op_type($1, $3)); 
   char * operation_type_name[TYPE_NUMBER] = {"", "div", "fdiv"};
-  printf_operation($$.reg_id, $1, $3, operation_type_name, ""); }
+  printf_operation($$, $1, $3, operation_type_name, ""); }
 
 | PO exp PF {$$=$2;}
 | ID {$$ = new_reg(find_type_from_name($1));

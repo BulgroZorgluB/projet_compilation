@@ -5,6 +5,7 @@
 #include "symbol_table.h"
 #include "conv_hex.h"
 
+  static int label_n = 0;
 
   void yyerror (char* s) {
     printf ("%s\n",s);
@@ -27,11 +28,16 @@
 
   /* generation de numero de label */
 
-  label new_label() {
-    static int n = 0;
+  label new_simple_label() {
     label result;
-    result.one = n++;
-    result.two = n++;
+    result.one = label_n;
+    result.two = label_n++;
+    return result;    
+  }
+  label new_double_label() {
+    label result;
+    result.one = label_n++;
+    result.two = label_n++;
     return result;
   }
 
@@ -60,8 +66,8 @@
     char * operation_name;
 
     operation_type(op1.reg_type, op2.reg_type, &type_string, &operation_name, operation_type_name); 
-
-    printf("\t %%r%i = %s %s %s %%r%d, %%r%d\n", result, operation_name, bool_operation, type_string, op1.reg_id, op2.reg_id);
+    
+    printf("\t %%r%i = %s %s%s %%r%d, %%r%d\n", result, operation_name, bool_operation, type_string, op1.reg_id, op2.reg_id);
   }
 
 
@@ -133,7 +139,7 @@ sera lue comme un char * (le type de sid). */
 
 %type <t> typename /*type*/
 %type <reg> exp bool  /* attribut d’une expr = valeur entiere */
-%type <lab> if else
+%type <lab> if else bool_cond while
 
 %start prog
 
@@ -167,7 +173,8 @@ fun_head : ID PO PF
 {
   char * type_string = string_of_type($<t>0);
   add_bloc(create_elem($1, $<t>0));
-  printf("define %s @%s() {\nL0:\n",type_string, $1);}
+  printf("define %s @%s() {\n",type_string, $1);
+  printf("L%i:\n", new_simple_label().one);}
 | ID PO param_list PF;
 
 fun_body : AO block AF {printf("}\n");};
@@ -217,10 +224,15 @@ exp PV
 | ret
 | PV;
 
-loop : WHILE PO exp PF DO AO block AF
+loop : while bool_cond DO AO block AF { printf("\t br label %%L%i\n", $1.one);
+    printf("L%i: \n", $2.two);}
 | DO AO block AF WHILE PO exp PF PV
 ;
 
+while : WHILE {$$ = new_simple_label();
+  printf("\t br label %%L%i \n", $$.one);
+  printf("L%i: \n", $$ .one);}
+;
 fun_app : ID PO args PF;
 
 args : arglist
@@ -239,18 +251,22 @@ ret : RETURN PV
   printf("\t ret %s %%r%i\n", string_type, $2.reg_id);};
 
 cond :
-if bool_cond inst %prec UNA {printf("L%i: ",$1.one);}
-| if bool_cond inst else inst {printf("L%i: ",$1.two);};
+if bool_cond inst %prec UNA {printf("L%i:\n",$2.two);}
+| if bool_cond inst else inst {printf("L%i:\n",$4.one);};
 
 
- bool_cond : PO bool PF {printf("if i1 %%r%i, label %i, label \n",$2.reg_id,$<lab>0.one);};
+bool_cond : PO bool PF {
+  $$ = new_double_label();
+  printf("\t br i1 %%r%i, label %%L%i, label %%L%i\n", $2.reg_id, $$.one, $$.two);
+  printf("L%i:\n", $$.one);};
 	      // l'attribut du if est juste avant sur la pile.
 	      // on doit préciser son type parce que YACC ne fait l'anlyse permettant de le savoir.
 	      // Notez qu'on ne precise pas le type de $2
 
-if : IF {$$ = new_label();};
+if : IF {/*$$ = new_double_label();*/};
 
-else : ELSE {$$ = $<lab>-2; printf("goto L%i;\n",$$.two); printf("L%i: ",$$.one); };
+ else : ELSE {
+   $$ = new_simple_label()/*$<lab>-2*/; printf("\t br label %%L%i;\n",$$.one); printf("L%i:\n",($<lab>-1).two); };
     // l'attibut du if se trouve à trois niveau en dessus, sur la pile,
     // en effet, le else apparait sur la pile toujorus trois coups après le if (voir rêgle du cond).
 
@@ -260,19 +276,19 @@ bool :
 exp INF exp {
   $$ = new_reg(op_type($1.reg_type, $3.reg_type));
   char * operation_type_name[TYPE_NUMBER] = {"", "icmp", "fcmp"};
-  printf_operation($$.reg_id, $1, $3, operation_type_name, "slt"); }
+  printf_operation($$.reg_id, $1, $3, operation_type_name, "slt "); }
 | exp SUP exp {
   $$ = new_reg(op_type($1.reg_type, $3.reg_type)); 
   char * operation_type_name[TYPE_NUMBER] = {"", "icmp", "fcmp"};
-  printf_operation($$.reg_id, $1, $3, operation_type_name, "sgt"); }
+  printf_operation($$.reg_id, $1, $3, operation_type_name, "sgt "); }
 | exp EQUAL exp {
   $$ = new_reg(op_type($1.reg_type, $3.reg_type)); 
   char * operation_type_name[TYPE_NUMBER] = {"", "icmp", "fcmp"};
-  printf_operation($$.reg_id, $1, $3, operation_type_name, "eq"); }
+  printf_operation($$.reg_id, $1, $3, operation_type_name, "eq "); }
 | exp DIFF exp {
   $$ = new_reg(op_type($1.reg_type, $3.reg_type));
   char * operation_type_name[TYPE_NUMBER] = {"", "icmp", "fcmp"};
-  printf_operation($$.reg_id, $1, $3, operation_type_name, "ne"); }
+  printf_operation($$.reg_id, $1, $3, operation_type_name, "ne "); }
 | bool AND bool {
   $$ = new_reg(op_type($1.reg_type, $3.reg_type)); 
   char * operation_type_name[TYPE_NUMBER] = {"", "icmp", "fcmp"};

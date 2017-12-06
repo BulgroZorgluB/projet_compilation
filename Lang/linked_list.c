@@ -96,6 +96,21 @@ elem search_elem_until_end (struct linked_list* start, sid symbol_name) {
   return value;
 }
 
+elem search_elem_between(struct linked_list* start, struct linked_list* end, sid symbol_name) {
+  elem value;
+  value.symbol_name = "";
+  value.symbol_type = T_VOID;
+  while(start != end) {
+    if(cmp_symbol_name((start->value).symbol_name, symbol_name) == 0) {
+      value.symbol_name = (start->value).symbol_name;
+      value.symbol_type = (start->value).symbol_type;
+    }
+    start = start->next;
+  }
+
+  return value;
+}
+
 
 void set_value (struct linked_list* cell, elem value) {
   (cell->value).symbol_name = value.symbol_name;

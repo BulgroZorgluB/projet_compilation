@@ -36,6 +36,8 @@ struct linked_list* search_until_end(struct linked_list* start, elem value);
 
 elem search_elem_until_end (struct linked_list* start, sid symbol_name);
 
+elem search_elem_between(struct linked_list* start, struct linked_list* end, sid symbol_name);
+
 void set_value (struct linked_list* cell, elem value);
 
 int cmp_value (elem e, elem v);

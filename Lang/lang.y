@@ -309,6 +309,7 @@ exp INF exp {
 
 exp
 : MOINS exp %prec UNA {$$ = new_reg($2.reg_type); printf("R%i = - R%i;\n", $$.reg_id, $2.reg_id); }
+| PLUS exp %prec UNA {$$ = new_reg($2.reg_type); printf("R%i = - R%i;\n", $$.reg_id, $2.reg_id); }
 | exp PLUS exp {
   $$ = new_reg(op_type($1.reg_type, $3.reg_type)); 
   char * operation_type_name[TYPE_NUMBER] = {"", "add", "fadd"};

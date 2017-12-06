@@ -11,6 +11,7 @@ struct symbol_table {
   struct linked_list *pointer_bloc[POOL_SIZE];
   int depth_bloc;
   int depth_control;
+  int number_bloc;
 };
 
 void create_table();
@@ -23,7 +24,7 @@ void add_symbol(elem new_elem);
 
 void remove_symbol(elem rm_elem);
 
-void add_bloc(elem new_elem);
+void add_bloc();
 
 void remove_bloc();
 

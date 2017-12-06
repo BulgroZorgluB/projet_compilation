@@ -23,14 +23,11 @@ void test_add_remove_symbol() {
   create_table();
   struct symbol_table *table = get_table();
   elem value[3];
-  value[0].symbol_name = "aaa";
-  value[0].symbol_type = T_INT;
+  value[0] = create_elem("aaa", T_INT);
 
-  value[1].symbol_name = "bbb";
-  value[1].symbol_type = T_INT;
+  value[1] = create_elem("bbb", T_INT);
 
-  value[2].symbol_name = "ccc";
-  value[2].symbol_type = T_VOID;
+  value[2] = create_elem("ccc", T_VOID);
 
   add_symbol(value[0]);
   struct linked_list * head = get_head();
@@ -58,25 +55,25 @@ void test_add_remove_bloc() {
   struct symbol_table *table = get_table();
   struct linked_list * head = get_head();
   elem value[3];
-  value[0].symbol_name = "aaa";
-  value[0].symbol_type = T_INT;
+  value[0] = create_elem("aaa", T_INT);
 
-  value[1].symbol_name = "bbb";
-  value[1].symbol_type = T_INT;
+  value[1] = create_elem("bbb", T_INT);
 
-  value[2].symbol_name = "ccc";
-  value[2].symbol_type = T_VOID;
+  value[2] = create_elem("ccc", T_VOID);
 
   assert(table->last_symbol == head);
   assert(table->depth_bloc == 0);
 
-  add_bloc(value[0]);  
-  head = get_head();
-  assert(table->last_symbol == head);
-  assert(table->depth_bloc == 1);
+  add_symbol(value[0]);
+  add_bloc();  
   assert(table->pointer_bloc[table->depth_bloc - 1] == table->last_symbol);
+  head = get_head();
 
-  add_bloc(value[1]);
+  assert(table->depth_bloc == 1);
+
+
+  add_symbol(value[1]);
+  add_bloc();
   assert(table->last_symbol != head);
   assert(table->depth_bloc == 2);
   assert(table->pointer_bloc[table->depth_bloc - 1] == table->last_symbol);
@@ -97,38 +94,34 @@ create_table();
   struct symbol_table *table = get_table();
   struct linked_list * head = get_head();
   elem value[6];
-  value[0].symbol_name = "aaa";
-  value[0].symbol_type = T_INT;
+  value[0] = create_elem("aaa", T_INT);
 
-  value[1].symbol_name = "bbb";
-  value[1].symbol_type = T_INT;
+  value[1] = create_elem("bbb", T_INT);
 
-  value[2].symbol_name = "ccc";
-  value[2].symbol_type = T_VOID;
-  
-  value[3].symbol_name = "f";
-  value[3].symbol_type = T_INT;
+  value[2] = create_elem("ccc", T_VOID);
 
-  value[4].symbol_name = "g";
-  value[4].symbol_type = T_INT;
+  value[3] = create_elem("f", T_INT);
 
-  value[5].symbol_name = "while";
-  value[5].symbol_type = T_VOID;
+  value[4] = create_elem("g", T_INT);
 
-  add_bloc(value[3]);
+  value[5] = create_elem("while", T_VOID);
+
+  add_symbol(value[3]);
+  add_bloc();
   assert(search_symbol_in_bloc(value[3]) == 1);
   assert(search_symbol_in_bloc(value[0]) == 0);
 
   add_symbol(value[0]);
   assert(search_symbol_in_bloc(value[0]) == 1);
 
-  add_bloc(value[4]);
+  add_symbol(value[4]);
+  add_bloc();
   assert(search_symbol_in_bloc(value[3]) == 0);
   assert(search_symbol_in_bloc(value[0]) == 0);
   
   add_symbol(value[1]);
-
-  add_bloc(value[5]);
+  add_bloc();
+  add_symbol(value[5]);
   increment_depth_control();
 
   add_symbol(value[2]);

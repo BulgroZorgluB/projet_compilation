@@ -11,6 +11,7 @@ void create_table() {
   table->last_symbol = get_head();
   table->depth_bloc = 0;
   table->depth_control = 0;
+  table->number_bloc = 0;
 }
 
 void destroy_table() {
@@ -54,10 +55,10 @@ void remove_symbol(elem rm_elem) {
   }
 }
 
-void add_bloc(elem new_elem) {
-  add_symbol(new_elem);
+void add_bloc() {
   table->pointer_bloc[table->depth_bloc] = table->last_symbol;
   table->depth_bloc++;
+  table->number_bloc++;
 }
 
 void remove_bloc() {
@@ -75,21 +76,37 @@ int search_symbol_in_bloc(elem x) {
   return 1;
 }
 
+sid create_symbol_name(sid symbol_name) {
+  sid new_name = malloc(sizeof(*(symbol_name))+sizeof(char)+sizeof(int));
+  sprintf(new_name,"%s_%d", symbol_name, table->number_bloc); 
+  return new_name;
+}
+
+void delete_symbol_name(sid symbol_name) {
+  free(symbol_name);
+}
+
 //elem symbolname is equal to "" if nothing was found
 enum type find_type_from_name(sid symbol_name) {
-  elem symbol = search_elem_until_end(table->pointer_bloc[table->depth_bloc - 1 - table->depth_control], symbol_name);
+  sid name_wanted = create_symbol_name(symbol_name);
+  elem symbol = search_elem_until_end(table->pointer_bloc[table->depth_bloc - 1 - table->depth_control], name_wanted);
+  delete_symbol_name(name_wanted);
   return symbol.symbol_type;
 }
 
 elem create_elem(sid symbol_name, enum type symbol_type) {
   elem new_elem;
-  new_elem.symbol_name = symbol_name;
+  new_elem.symbol_name = malloc(sizeof(*(symbol_name))+sizeof(char)+sizeof(int));
+  sprintf(new_elem.symbol_name,"%s_%d", symbol_name, table->number_bloc); 
   new_elem.symbol_type = symbol_type;
   return new_elem;
 }
 
+
+
 void increment_depth_control() {
   table->depth_control++;
+  table->number_bloc++;
 }
 
 void decrement_depth_control() {

@@ -12,6 +12,8 @@
 
 enum type {T_VOID, T_INT, T_FLOAT};
 
+enum loop_type{NONE, T_WHILE_DO, T_DO_WHILE};
+
 typedef struct {
   int reg_id;
   enum type reg_type;

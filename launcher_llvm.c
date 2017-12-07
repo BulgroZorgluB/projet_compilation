@@ -1,7 +1,7 @@
 #include <stdio.h>
-int f();
+float f();
 
 int main(int argc, char*argv[]) {
-  printf("%d\n", f());
+  printf("%f\n", f());
   return 0;
 }

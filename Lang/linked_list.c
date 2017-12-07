@@ -83,31 +83,30 @@ struct linked_list* search_until_end(struct linked_list* start, elem value) {
 
 elem search_elem_until_end (struct linked_list* start, sid symbol_name) {
   elem value;
-  value.symbol_name = "";
+  value.symbol_name = NULL;
   value.symbol_type = T_VOID;
   while(start != start->next) {
-    if(cmp_symbol_name((start->value).symbol_name, symbol_name) == 0) {
+    if(cmp_symbol_name((start->value).symbol_name->symbol_name, symbol_name) == 0) {
       value.symbol_name = (start->value).symbol_name;
       value.symbol_type = (start->value).symbol_type;
     }
     start = start->next;
   }
-
   return value;
 }
 
 elem search_elem_between(struct linked_list* start, struct linked_list* end, sid symbol_name) {
   elem value;
-  value.symbol_name = "";
+  value.symbol_name = NULL;
   value.symbol_type = T_VOID;
   while(start != end) {
-    if(cmp_symbol_name((start->value).symbol_name, symbol_name) == 0) {
+    if(cmp_symbol_name((start->value).symbol_name->symbol_name, symbol_name) == 0) {
       value.symbol_name = (start->value).symbol_name;
       value.symbol_type = (start->value).symbol_type;
     }
     start = start->next;
   }
-
+  display_symbol_id(value.symbol_name);
   return value;
 }
 
@@ -118,13 +117,13 @@ void set_value (struct linked_list* cell, elem value) {
 }
 
 int cmp_value(elem e, elem v) {
-  if((cmp_symbol_name(e.symbol_name, v.symbol_name) == 0) && (v.symbol_type == e.symbol_type) ) {
+  if((cmp_symbol_name(e.symbol_name->symbol_name, v.symbol_name->symbol_name) == 0) && (v.symbol_type == e.symbol_type) ) {
     return 1;
   }
   return 0;
 }
 
-int cmp_symbol_name(char * name_e, char * name_v) {
+int cmp_symbol_name(char* name_e, char* name_v) {
   return strcmp(name_e, name_v);
 }
 /*
@@ -136,7 +135,13 @@ void remove_value (struct linked_list* cell) {
 void display_list() {
   struct linked_list * start = head;
   while(start != start->next) {
-    printf("%d, %s\n",start->value.symbol_type, start->value.symbol_name);
+    printf("%d,",start->value.symbol_type);
+    display_symbol_id(start->value.symbol_name);
+    printf("\n");
     start = start->next;
   }
+}
+
+void display_symbol_id(symbol_id *e) {
+  printf("%s_%d", e->symbol_name, e->symbol_bloc);
 }

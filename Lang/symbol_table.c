@@ -79,8 +79,7 @@ int search_symbol_in_bloc(elem x) {
 
 symbol_id*  create_symbol_name(sid symbol_name, int number_bloc) {
   symbol_id* new_name = malloc(sizeof(symbol_id));
-  new_name->symbol_name = malloc(sizeof(*(symbol_name)));
-  strcpy(new_name->symbol_name, symbol_name);
+  new_name->symbol_name = strdup(symbol_name);
   new_name->symbol_bloc = number_bloc;
   return new_name;
 }

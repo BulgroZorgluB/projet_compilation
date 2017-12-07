@@ -188,7 +188,7 @@ sera lue comme un char * (le type de sid). */
 
 %%
 
-prog : init block;
+prog : init block  {destroy_table();}; 
 
 init: {create_table();};
 

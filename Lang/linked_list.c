@@ -56,11 +56,16 @@ void add_next(struct linked_list* cell, elem value) {
   }
 }
 
+void delete_symbol_id(symbol_id* s_id) {
+  free(s_id->symbol_name);
+  free(s_id);
+}
+
 void remove_next(struct linked_list* cell) {
   struct linked_list* cell_next = cell->next;
   if (cell->next != cell && cell_next != sentinel) {
     cell->next = cell_next->next;
-    free(cell_next->value.symbol_name);
+    delete_symbol_id((cell_next->value).symbol_name);
     free(cell_next);
   }
 }
@@ -145,3 +150,4 @@ void display_list() {
 void display_symbol_id(symbol_id *e) {
   printf("%s_%d", e->symbol_name, e->symbol_bloc);
 }
+

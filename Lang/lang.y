@@ -102,7 +102,7 @@
   }
 }
 
-  void printf_operation(registre result, registre op1, registre op2, char ** operation_type_name, char * bool_operation) {
+ void printf_operation(registre result, registre op1, registre op2, char ** operation_type_name, char * bool_operation) {
     char * type_string;
     char * operation_name;
 
@@ -180,7 +180,7 @@ sera lue comme un char * (le type de sid). */
 
 %type <t> typename /*type*/
 %type <reg> exp bool  /* attribut d’une expr = valeur entiere */
-%type <lab> else while do bool_cond
+%type <lab> else while do bool_cond and
 
 %start prog
 
@@ -352,13 +352,13 @@ bool_cond : PO bool PF {
 	      // Notez qu'on ne precise pas le type de $2
 
 if : IF {
-add_symbol(create_elem("if", T_VOID)); };
+  add_symbol(create_elem("if", T_VOID)); };
 
  else : ELSE {
    add_symbol(create_elem("else", T_VOID));
    $$ = new_simple_label()/*$<lab>-2*/; printf("\t br label %%L%i\n",$$.one); printf("L%i:\n",($<lab>-1).two); };
-    // l'attibut du if se trouve à trois niveau en dessus, sur la pile,
-    // en effet, le else apparait sur la pile toujorus trois coups après le if (voir rêgle du cond).
+// l'attibut du if se trouve à trois niveau en dessus, sur la pile,
+// en effet, le else apparait sur la pile toujorus trois coups après le if (voir rêgle du cond).
 
 // ce n'est pas la facon dont on souhaiterais coder les calculs booleens... (voir en dessous)
 
@@ -379,15 +379,39 @@ exp INF exp {
   $$ = new_reg(op_type(&$1, &$3));
   char * operation_type_name[TYPE_NUMBER] = {"", "icmp", "fcmp"};
   printf_operation($$, $1, $3, operation_type_name, "ne "); }
-| bool AND bool {
-  $$ = new_reg(op_type(&$1, &$3)); 
-  char * operation_type_name[TYPE_NUMBER] = {"", "icmp", "fcmp"};
-  printf_operation($$, $1, $3, operation_type_name, "ne"); }
-| bool OR bool {$$ = new_reg(op_type(&$1, &$3)); 
-  char * operation_type_name[TYPE_NUMBER] = {"", "icmp", "fcmp"};
-  printf_operation($$, $1, $3, operation_type_name, "ne"); }
+| bool and bool {$$ = $3;}
+
+| bool or bool 
+
 | NOT bool {$$ = new_reg($2.reg_type); printf("\t %%r%i = ! R%i;\n", $$.reg_id, $2.reg_id); }
 | PO bool PF{$$ = $2;};
+
+and: AND {
+  int label_true;
+  int label_false;
+  int label_displayed;
+  if(lt == NONE) {
+    increment_depth_control();
+  }
+  if(lt != T_DO_WHILE) {
+    $$ = new_double_label(); 
+    label_true = $$.one;
+    label_false = $$.two;
+    label_displayed = label_true;
+  }
+  else {
+    $$ = new_double_label(); //besoin d'un double label ici !!!!
+    label_true = $<lab>.one;
+    label_false = $$.one;
+    label_displayed = label_true;
+  }
+  printf("\t br i1 %%r%i, label %%L%i, label %%L%i\n", $<reg>0.reg_id,label_true, label_false);
+  printf("L%i:\n", label_displayed+1);
+  printf("\t br label %%L%i\n", label_displayed+3);
+  printf("L%i:\n", label_displayed);
+};
+
+or: OR;
 
 // Comment faire à la place une évaluation "paresseuse" des booléens ?
 // Idée: le programme produit pour coder un booléen est un morceau de code c associé à deux labels,

@@ -8,8 +8,14 @@ CONVERSION = test_conversion_type.ll
 SCOPE = test_declaration_in_different_scope.ll
 ERR = test_double_declaration_variable.ll test_not_found_variable.ll
 
+COMPILATEUR = Lang	
 
-all	: void int float condition boucle sub err
+.PHONY: compilateur
+
+all	: compilateur void int float condition boucle sub err
+
+compilateur	:
+	$(MAKE) -sC $(COMPILATEUR)
 
 void	: $(VOID)
 
@@ -29,4 +35,7 @@ err	: $(err)
 	./Lang/prog < $< 1> $@
 
 clean:
+	$(MAKE) -sC $(COMPILATEUR) clean
 	rm -f *.ll 
+
+

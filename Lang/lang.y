@@ -244,13 +244,15 @@ param_list: type ID vir param_list
 | type ID;
 
 vlist: ID vir vlist {
-  char * type_string = string_of_type($<t>0);
-  printf("\t %%%s = alloca %s\n", $1, type_string); 
-  add_symbol(create_elem($1,$<t>0));};
+  elem x = create_elem($1,$<t>0);
+  char * type_string = string_of_type(x.symbol_type);
+  printf("\t %%%s = alloca %s\n", x.symbol_name, type_string); 
+  add_symbol(x);};
 | ID {
-  char * type_string = string_of_type($<t>0);
-  printf("\t %%%s = alloca %s\n", $1, type_string);
-  add_symbol(create_elem($1,$<t>0));};
+  elem x = create_elem($1,$<t>0);
+  char * type_string = string_of_type(x.symbol_type);
+  printf("\t %%%s = alloca %s\n", x.symbol_name, type_string); 
+  add_symbol(x);};
 
 vir : VIR;
 
@@ -281,7 +283,6 @@ loop : while bool_cond do ao block af { lt = NONE; decrement_depth_control(); pr
     printf("L%i: \n", $$ .one);
     lt = T_WHILE_DO; 
    }
-
 };
 
 do : DO {
@@ -305,12 +306,12 @@ arglist : ID VIR arglist
 | ID;
 
 aff : ID EQ exp PV {
-  enum type id_type = find_type_from_name($1);
-  if( id_type == T_VOID) {
+  elem symbol = find_elem_from_name($1);
+  if( symbol.symbol_type == T_VOID) {
     yyerror("symbol not found !\n");
   }
-  char* string_type = string_of_type(id_type);
-  printf("\t store %s %%r%i, %s* %%%s\n",string_type, $3.reg_id, string_type, $1);};
+  char* string_type = string_of_type(symbol.symbol_type);
+  printf("\t store %s %%r%i, %s* %%%s\n",string_type, $3.reg_id, string_type, symbol.symbol_name);};
 
 ret : RETURN PV
 | RETURN exp PV {
@@ -350,7 +351,8 @@ bool_cond : PO bool PF {
 	      // on doit préciser son type parce que YACC ne fait l'anlyse permettant de le savoir.
 	      // Notez qu'on ne precise pas le type de $2
 
-if : IF {add_symbol(create_elem("if", T_VOID));};
+if : IF {
+add_symbol(create_elem("if", T_VOID)); };
 
  else : ELSE {
    add_symbol(create_elem("else", T_VOID));
@@ -436,13 +438,13 @@ exp
 
 | PO exp PF {$$=$2;}
 | ID {
-  enum type id_type = find_type_from_name($1);
-  if(id_type == T_VOID) {
+  elem symbol = find_elem_from_name($1);
+  if(symbol.symbol_type == T_VOID) {
     yyerror("symbol not found !\n");
   }
-  $$ = new_reg(id_type);
-  char * type_string = string_of_type(id_type);
-  printf("\t %%r%i = load %s, %s* %%%s\n", $$.reg_id, type_string, type_string, $1); }
+  $$ = new_reg(symbol.symbol_type);
+  char * type_string = string_of_type(symbol.symbol_type);
+  printf("\t %%r%i = load %s, %s* %%%s\n", $$.reg_id, type_string, type_string, symbol.symbol_name); }
 | CONSTANTI {$$ = new_reg(T_INT); 
   printf("\t %%r%i = add i32 %i, 0\n", $$.reg_id, $1); }
 | CONSTANTF {$$ = new_reg(T_FLOAT);

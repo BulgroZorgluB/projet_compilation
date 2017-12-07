@@ -30,7 +30,7 @@ void remove_bloc();
 
 int search_symbol_in_bloc(elem x);
 
-enum type find_type_from_name(sid symbol_name);
+elem find_elem_from_name(sid symbol_name);
 
 elem create_elem(sid symbol_name, enum type symbol_type);
 

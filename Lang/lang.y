@@ -430,7 +430,16 @@ exp INF exp {
 // Historiquement, ce codage est due à Alonzo Church avec son lambda calcul...
 
 exp
-: MOINS exp %prec UNA {$$ = new_reg($2.reg_type); printf("R%i = - R%i;\n", $$.reg_id, $2.reg_id); }
+: MOINS exp %prec UNA {
+  $$ = new_reg($2.reg_type); 
+  if ( $2.reg_type == T_INT ) {
+    printf("\t %%r%i = sub %s %d, %%r%i \n", $$.reg_id, S_INT, 0, $2.reg_id);
+  }
+  else {
+    printf("\t %%r%i = fsub %s %s, %%r%i \n", $$.reg_id, S_FLOAT, float_to_hex(0.0), $2.reg_id); 
+    }
+}
+
 | exp PLUS exp {
   $$ = new_reg(op_type(&$1, &$3)); 
   char * operation_type_name[TYPE_NUMBER] = {"", "add", "fadd"};
@@ -455,8 +464,6 @@ exp
 | ID {
   elem symbol = find_elem_from_name($1);
   if(symbol.symbol_type == T_VOID) {
-    printf("%s\n", $1);
-    printf("ID in exp\n");
     yyerror("symbol not found !\n");
   }
   $$ = new_reg(symbol.symbol_type);
@@ -467,7 +474,7 @@ exp
 | CONSTANTI {$$ = new_reg(T_INT); 
   printf("\t %%r%i = add i32 %i, 0\n", $$.reg_id, $1); }
 | CONSTANTF {$$ = new_reg(T_FLOAT);
-  printf("\t %%r%i = fadd float %s, %s \n", $$.reg_id, float_to_hex($1), float_to_hex(0.0)); }
+  printf("\t %%r%i = fadd float %s, %s \n", $$.reg_id, float_to_hex($1), float_to_hex(0.0)); } 
 | fun_app {$$ = new_reg(T_INT); printf("R%i = TODO\n", $$.reg_id); }
 ;
 

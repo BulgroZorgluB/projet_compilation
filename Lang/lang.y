@@ -10,7 +10,7 @@
   static enum loop_type lt = NONE;
 
   int yyerror (char* s) {
-    printf ("%s\n",s);
+    fprintf(stderr,"error: %s\n",s);
     return EXIT_FAILURE;
   }
 
@@ -73,16 +73,16 @@
 
  enum type op_type(registre *op1, registre *op2) {
    if( op1->reg_type == T_FLOAT || op2->reg_type == T_FLOAT) {
-     if (op1->reg_type == T_FLOAT) {
-       registre tmp = new_reg(T_FLOAT);
-       convert_int_to_float(tmp.reg_id, op2->reg_id);
-       copy_registre(op2, tmp);
-       
-     }
-     else if (op2->reg_type == T_FLOAT) {
+     if (op1->reg_type == T_INT) {
        registre tmp = new_reg(T_FLOAT);
        convert_int_to_float(tmp.reg_id, op1->reg_id);
        copy_registre(op1, tmp);
+       
+     }
+     else if (op2->reg_type == T_INT) {
+       registre tmp = new_reg(T_FLOAT);
+       convert_int_to_float(tmp.reg_id, op2->reg_id);
+       copy_registre(op2, tmp);
      }
      return T_FLOAT;
   }
@@ -188,7 +188,7 @@ sera lue comme un char * (le type de sid). */
 
 %%
 
-prog : init block;
+prog : init block  {destroy_table();}; 
 
 init: {create_table();};
 
@@ -245,13 +245,23 @@ param_list: type ID vir param_list
 
 vlist: ID vir vlist {
   elem x = create_elem($1,$<t>0);
+  if(search_symbol_in_bloc(x)) {
+    yyerror("variable already created !");
+  }
   char * type_string = string_of_type(x.symbol_type);
-  printf("\t %%%s = alloca %s\n", x.symbol_name, type_string); 
+  printf("\t %%", x.symbol_name);
+  display_symbol_id(x.symbol_name);
+  printf(" = alloca %s\n", type_string);
   add_symbol(x);};
 | ID {
   elem x = create_elem($1,$<t>0);
+  if(search_symbol_in_bloc(x)) {
+    printf("variable already created !");
+  }  
   char * type_string = string_of_type(x.symbol_type);
-  printf("\t %%%s = alloca %s\n", x.symbol_name, type_string); 
+  printf("\t %%", x.symbol_name);
+  display_symbol_id(x.symbol_name);
+  printf(" = alloca %s\n", type_string);
   add_symbol(x);};
 
 vir : VIR;
@@ -273,7 +283,7 @@ exp PV
 
 loop : while bool_cond do ao block af { lt = NONE; decrement_depth_control(); printf("\t br label %%L%i\n", $1.one);
     printf("L%i: \n", $2.two);}
-| do ao block af while bool_cond PV {lt = NONE; decrement_depth_control();}
+| do ao block af while bool_cond PV {lt = NONE;}
 ;
 
  while : WHILE {
@@ -282,6 +292,9 @@ loop : while bool_cond do ao block af { lt = NONE; decrement_depth_control(); pr
     printf("\t br label %%L%i \n", $$.one);
     printf("L%i: \n", $$ .one);
     lt = T_WHILE_DO; 
+   }
+   else if(lt == T_DO_WHILE) {
+     decrement_depth_control();
    }
 };
 
@@ -308,10 +321,13 @@ arglist : ID VIR arglist
 aff : ID EQ exp PV {
   elem symbol = find_elem_from_name($1);
   if( symbol.symbol_type == T_VOID) {
-    yyerror("symbol not found !\n");
+    printf("ID in aff\n");
+    yyerror("symbol not found !");
   }
   char* string_type = string_of_type(symbol.symbol_type);
-  printf("\t store %s %%r%i, %s* %%%s\n",string_type, $3.reg_id, string_type, symbol.symbol_name);};
+  printf("\t store %s %%r%i, %s* %%",string_type, $3.reg_id, string_type);
+  display_symbol_id(symbol.symbol_name);
+  printf("\n");};
 
 ret : RETURN PV
 | RETURN exp PV {
@@ -438,8 +454,21 @@ or: OR;
 // Historiquement, ce codage est due à Alonzo Church avec son lambda calcul...
 
 exp
+<<<<<<< HEAD
 : MOINS exp %prec UNA {$$ = new_reg($2.reg_type); printf("R%i = - R%i;\n", $$.reg_id, $2.reg_id); }
 | PLUS exp %prec UNA {$$ = new_reg($2.reg_type); printf("R%i = - R%i;\n", $$.reg_id, $2.reg_id); }
+=======
+: MOINS exp %prec UNA {
+  $$ = new_reg($2.reg_type); 
+  if ( $2.reg_type == T_INT ) {
+    printf("\t %%r%i = sub %s %d, %%r%i \n", $$.reg_id, S_INT, 0, $2.reg_id);
+  }
+  else {
+    printf("\t %%r%i = fsub %s %s, %%r%i \n", $$.reg_id, S_FLOAT, float_to_hex(0.0), $2.reg_id); 
+    }
+}
+
+>>>>>>> 7e3ecbd098d890a89225408ff199e7db9cbe6cd0
 | exp PLUS exp {
   $$ = new_reg(op_type(&$1, &$3)); 
   char * operation_type_name[TYPE_NUMBER] = {"", "add", "fadd"};
@@ -468,11 +497,13 @@ exp
   }
   $$ = new_reg(symbol.symbol_type);
   char * type_string = string_of_type(symbol.symbol_type);
-  printf("\t %%r%i = load %s, %s* %%%s\n", $$.reg_id, type_string, type_string, symbol.symbol_name); }
+  printf("\t %%r%i = load %s, %s* %%", $$.reg_id, type_string, type_string); 
+  display_symbol_id(symbol.symbol_name);
+  printf("\n");}
 | CONSTANTI {$$ = new_reg(T_INT); 
   printf("\t %%r%i = add i32 %i, 0\n", $$.reg_id, $1); }
 | CONSTANTF {$$ = new_reg(T_FLOAT);
-  printf("\t %%r%i = fadd float %s, %s \n", $$.reg_id, float_to_hex($1), float_to_hex(0.0)); }
+  printf("\t %%r%i = fadd float %s, %s \n", $$.reg_id, float_to_hex($1), float_to_hex(0.0)); } 
 | fun_app {$$ = new_reg(T_INT); printf("R%i = TODO\n", $$.reg_id); }
 ;
 

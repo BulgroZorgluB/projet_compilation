@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <string.h>
 #include <stdio.h>
 #include "symbol_table.h"
 
@@ -76,9 +77,10 @@ int search_symbol_in_bloc(elem x) {
   return 1;
 }
 
-sid create_symbol_name(sid symbol_name, int number_bloc) {
-  sid new_name = malloc(sizeof(*(symbol_name)) + sizeof(char)+sizeof(int));
-  sprintf(new_name,"%s_%d", symbol_name, number_bloc); 
+symbol_id*  create_symbol_name(sid symbol_name, int number_bloc) {
+  symbol_id* new_name = malloc(sizeof(symbol_id));
+  new_name->symbol_name = strdup(symbol_name);
+  new_name->symbol_bloc = number_bloc;
   return new_name;
 }
 
@@ -88,16 +90,10 @@ void delete_symbol_name(sid symbol_name) {
 
 //elem symbolname is equal to "" if nothing was found
 elem find_elem_from_name(sid symbol_name) {
-  int i = 0;
   elem symbol;
-  symbol.symbol_name = "";
+  symbol.symbol_name = NULL;
   symbol.symbol_type = T_VOID;
-  while ( i <= table->depth_control && strcmp(symbol.symbol_name,"") == 0) {
-    sid name_wanted = create_symbol_name(symbol_name, table->depth_bloc - i);
-    symbol = search_elem_until_end(table->pointer_bloc[table->depth_bloc - 1 - i], name_wanted);
-    delete_symbol_name(name_wanted);
-    i++;
-  }
+  symbol = search_elem_until_end(table->pointer_bloc[table->depth_bloc - 1 - table->depth_control], symbol_name);
   return symbol;
 }
 
@@ -112,7 +108,6 @@ elem create_elem(sid symbol_name, enum type symbol_type) {
 
 void increment_depth_control() {
   table->depth_control++;
-  table->number_bloc++;
 }
 
 void decrement_depth_control() {

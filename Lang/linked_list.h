@@ -7,6 +7,11 @@ typedef void* sid;
 
 typedef struct {
   sid symbol_name;
+  int symbol_bloc;
+} symbol_id;
+
+typedef struct {
+  symbol_id* symbol_name;
   enum type symbol_type; 
 } elem;
 
@@ -48,4 +53,5 @@ void remove_value (struct linked_list* cell);
 */
 void display_list();
 
+void display_symbol_id(symbol_id *e);
 #endif //_LINKED_LIST_H

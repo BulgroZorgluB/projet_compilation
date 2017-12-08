@@ -72,9 +72,9 @@ void remove_bloc() {
 
 int search_symbol_in_bloc(elem x) {
   struct linked_list *symbol = search_until_end(table->pointer_bloc[table->depth_bloc - 1 - table->depth_control], x);
-  if(symbol == NULL)
-    return 0;
-  return 1;
+  if(symbol != NULL && (x.symbol_name)->symbol_bloc == ((symbol->value).symbol_name)->symbol_bloc)
+    return 1;
+  return 0;
 }
 
 symbol_id*  create_symbol_name(sid symbol_name, int number_bloc) {

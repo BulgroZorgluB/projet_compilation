@@ -9,9 +9,9 @@
   static int label_n = 0;
   static enum loop_type lt = NONE;
 
-  int yyerror (char* s) {
+  void yyerror (char* s) {
     fprintf(stderr,"error: %s\n",s);
-    return EXIT_FAILURE;
+    exit(1);
   }
 
   void yywrap () {
@@ -249,7 +249,7 @@ vlist: ID vir vlist {
     yyerror("variable already created !");
   }
   char * type_string = string_of_type(x.symbol_type);
-  printf("\t %%", x.symbol_name);
+  printf("\t %%");
   display_symbol_id(x.symbol_name);
   printf(" = alloca %s\n", type_string);
   add_symbol(x);};
@@ -259,7 +259,7 @@ vlist: ID vir vlist {
     printf("variable already created !");
   }  
   char * type_string = string_of_type(x.symbol_type);
-  printf("\t %%", x.symbol_name);
+  printf("\t %%");
   display_symbol_id(x.symbol_name);
   printf(" = alloca %s\n", type_string);
   add_symbol(x);};

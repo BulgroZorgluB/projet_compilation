@@ -1,4 +1,4 @@
- int f()
+int f()
 {
   int i;
   int n;
@@ -6,7 +6,7 @@
   n = 0;
   do {
     n = n + 1;
-    i = i - 1;
-  } while (i > 0) ;
+    i - i;
+  } while (i > 0);
   return n;
 }

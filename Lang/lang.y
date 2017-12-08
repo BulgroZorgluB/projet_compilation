@@ -417,12 +417,13 @@ and: AND {
   }
   else {
     $$ = new_double_label(); //besoin d'un double label ici !!!!
-    label_true = $<lab>.one;
+    label_true = $$.two;
     label_false = $$.one;
     label_displayed = label_true;
   }
   printf("\t br i1 %%r%i, label %%L%i, label %%L%i\n", $<reg>0.reg_id,label_true, label_false);
-  printf("L%i:\n", label_displayed+1);
+  //  printf("L%i:\n", label_displayed+1);
+  printf("L%i:\n", label_false);
   printf("\t br label %%L%i\n", label_displayed+3);
   printf("L%i:\n", label_displayed);
 };
@@ -453,12 +454,8 @@ or: OR;
 
 // Historiquement, ce codage est due à Alonzo Church avec son lambda calcul...
 
-exp
-<<<<<<< HEAD
-: MOINS exp %prec UNA {$$ = new_reg($2.reg_type); printf("R%i = - R%i;\n", $$.reg_id, $2.reg_id); }
-| PLUS exp %prec UNA {$$ = new_reg($2.reg_type); printf("R%i = - R%i;\n", $$.reg_id, $2.reg_id); }
-=======
-: MOINS exp %prec UNA {
+exp:
+MOINS exp %prec UNA {
   $$ = new_reg($2.reg_type); 
   if ( $2.reg_type == T_INT ) {
     printf("\t %%r%i = sub %s %d, %%r%i \n", $$.reg_id, S_INT, 0, $2.reg_id);
@@ -467,8 +464,6 @@ exp
     printf("\t %%r%i = fsub %s %s, %%r%i \n", $$.reg_id, S_FLOAT, float_to_hex(0.0), $2.reg_id); 
     }
 }
-
->>>>>>> 7e3ecbd098d890a89225408ff199e7db9cbe6cd0
 | exp PLUS exp {
   $$ = new_reg(op_type(&$1, &$3)); 
   char * operation_type_name[TYPE_NUMBER] = {"", "add", "fadd"};

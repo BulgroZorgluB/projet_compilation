@@ -412,11 +412,11 @@ and: AND {
   label_false = $$.two;
   if(lt != T_DO_WHILE) {
     label_displayed = label_true;
-    label_out = label_displayed + 3;
+    label_out = label_displayed + 3; // label_false du bool suivant
   }
   else {
     label_displayed = label_true;
-    label_out = label_false + 1;
+    label_out = label_displayed + 2; // label true du bool suivant
   }
   printf("\t br i1 %%r%i, label %%L%i, label %%L%i\n", $<reg>0.reg_id,label_true, label_false);
   printf("L%i:\n", label_false);
@@ -433,15 +433,18 @@ or: OR {
   label_true = $$.one;
   label_false = $$.two;
   if(lt != T_DO_WHILE) {
-    label_displayed = label_true;
-    label_out = label_displayed + 3;
+    label_displayed = label_false;
+    label_out = label_displayed + 1; //label_true du bool suivant
   }
   else {
-    label_displayed = label_true;
-    label_out = label_displayed+2;
+    label_displayed = label_false;
+    label_out = label_displayed - 2; //label qui précède label_true
+    //soit : le label_false du bool précédent (-> marche avec plusieurs 'ou' ?,
+    //sinon essayer de changer l'ordre des deux blocs pour avoir un décalage régulier)
+    //soit : le label du bloc qui appelle cet embranchement
   }
   printf("\t br i1 %%r%i, label %%L%i, label %%L%i\n", $<reg>0.reg_id,label_true, label_false);
-  printf("L%i:\n", label_false);
+  printf("L%i:\n", label_true);
   printf("\t br label %%L%i\n", label_out);
   printf("L%i:\n", label_displayed);
 };

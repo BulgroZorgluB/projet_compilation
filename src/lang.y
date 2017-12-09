@@ -4,10 +4,14 @@
 #include <string.h>
 #include "utile.h"
 #include "symbol_table.h"
-#include "conv_hex.h"
+#include "conv_hex.h" 
+#include "list_of.h"
 
   static int label_n = 0;
   static enum loop_type lt = NONE;
+  static list_of *arg_list;
+  static list_of *function_list;
+
 
   void yyerror (char* s) {
     fprintf(stderr,"error: %s\n",s);
@@ -78,7 +82,7 @@
        convert_int_to_float(tmp.reg_id, op1->reg_id);
        copy_registre(op1, tmp);
        
-     }
+      }
      else if (op2->reg_type == T_INT) {
        registre tmp = new_reg(T_FLOAT);
        convert_int_to_float(tmp.reg_id, op2->reg_id);
@@ -128,7 +132,21 @@
    return type_string;
  }
 
+ void printf_symbol(symbol s) {
+   printf("%s %%%s", string_of_type(s.type), s.name);
+ }
 
+ void printf_parameters(node n) {
+   int size = n.size;
+   int i = 0;
+   printf_symbol((n.arguments[i]).s);
+   ++i;
+   while ( i < n.size) {
+     printf(", ");
+     printf_symbol((n.arguments[i]).s);
+     ++i;
+   }
+}
 
 %}
 
@@ -155,7 +173,7 @@ sera lue comme un char * (le type de sid). */
 %token <n> CONSTANTI /* attribut d’une constante entière = int */
 %token <f> CONSTANTF /* attribut d’une constante flottante = float */
 
-%token <sid> ID  /* attribut d’un registre = sid */
+%token <sid> ID /* attribut d’un registre = sid */
 
 %token IF ELSE
 
@@ -178,6 +196,7 @@ sera lue comme un char * (le type de sid). */
 %nonassoc UNA    /* pseudo token pour assurer une priorite locale */
 %nonassoc ELSE
 
+%type <sid> fun_name
 %type <t> typename /*type*/
 %type <reg> exp bool  /* attribut d’une expr = valeur entiere */
 %type <lab> else while do bool_cond and or
@@ -190,7 +209,7 @@ sera lue comme un char * (le type de sid). */
 
 prog : init block  {destroy_table();}; 
 
-init: {create_table();};
+init: {create_table(); arg_list = init_list(REGISTER); function_list = init_list(SYMBOL);};
 
 block:
 decl_list inst_list
@@ -210,13 +229,23 @@ fun_decl : type fun;
 
 fun : fun_head fun_body;
 
-fun_head : ID PO PF 
+fun_head : fun_name PO PF 
 {
   char * type_string = string_of_type($<t>0);
   add_symbol(create_elem($1, $<t>0));
   printf("define %s @%s() {\n",type_string, $1);
-  printf("L%i:\n", new_simple_label().one);}
-| ID PO param_list PF;
+  printf("L%i:\n", new_simple_label().one);
+}
+| fun_name PO param_list PF {
+  char * type_string = string_of_type($<t>0);
+  add_symbol(create_elem($1, $<t>0));
+  printf("define %s @%s(", type_string, $1);
+  printf_parameters(function_list->nodes[(function_list->size) - 1]);
+  printf("){\n");
+  printf("L%i:\n", new_simple_label().one);
+};
+
+fun_name : ID {$$ = $1; function_list = add_symbol_node(function_list, $<t>0, $$);};
 
 fun_body : ao block af {printf("}\n");};
 
@@ -240,8 +269,8 @@ pointer
 | STAR
 ;
 
-param_list: type ID vir param_list
-| type ID;
+param_list: type ID vir param_list {add_argument_node(function_list, $<t>1, $2);}
+| type ID {add_argument_node(function_list, $<t>1, $2);};
 
 vlist: ID vir vlist {
   elem x = create_elem($1,$<t>0);

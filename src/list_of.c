@@ -4,22 +4,25 @@
 
 #include "list_of.h"
 
-void init_list(list_of *l, enum elem_type e_t) {
+list_of *init_list(enum elem_type e_t) {
+  list_of *l;
   l = malloc(sizeof(list_of));
   l->e_t = e_t;
   l->size = 0;
   l->size_max = 0;
+  return l;
 }
 
-void alloc(list_of *l) {
+list_of *alloc(list_of *l) {
   if (l->size_max == 0) { 
     l->nodes = malloc(sizeof(node));
     l->size_max++;
   } 
   else {
     l->nodes = realloc(l->nodes, sizeof(node) * l->size_max * 2);
-    l->size_max *= 2;
+      l->size_max *= 2;
   }
+  return l;
 }
 
 void argument_alloc(node *n) {
@@ -33,26 +36,37 @@ void argument_alloc(node *n) {
   }
 }
 
-void add_symbol_node(list_of *l, enum type t, sid name) {
+init_node(node *n) {
+  n->size = 0;
+  n->size_max = 0;
+}
+
+list_of* add_symbol_node(list_of *l, enum type t, sid name) {
   symbol s;
   s.name = strdup(name);
   s.type = t;
-  alloc(l);
+  l = alloc(l);
+  init_node(&(l->nodes[l->size]));
   l->nodes[l->size].s = s;
+  
   l->size++;
+  return l;
 }
 
-void add_registre_node(list_of *l, registre r) {
-  alloc(l);
+list_of* add_registre_node(list_of *l, registre r) {
+  l = alloc(l);
   l->nodes[l->size].r = r;
+  init_node(&(l->nodes[l->size]));
   l->size++;
+  return l;
 }
 
-void add_argument_node(node *n, enum type t, sid name) {
+void add_argument_node(list_of *l, enum type t, sid name) {
   symbol s;
   s.name = strdup(name);
   s.type = t;
-  argument_alloc(n);
+  argument_alloc(&(l->nodes[l->size - 1]));
+  node *n = &(l->nodes[l->size - 1]);
   n->arguments[n->size].s = s;
   n->size++;
 }
@@ -97,3 +111,4 @@ void display_list_of(list_of *l) {
     ++i;
   }
 }
+

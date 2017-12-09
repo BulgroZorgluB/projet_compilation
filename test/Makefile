@@ -1,3 +1,5 @@
+EXECUTABLE_PATH = ../bin/compiler	
+
 VOID = test_void.ll
 INT = test_constante_int.ll test_variable_int.ll
 FLOAT = test_constante_float.ll test_variable_float.ll test_sub.ll
@@ -8,14 +10,11 @@ CONVERSION = test_conversion_type.ll
 SCOPE = test_declaration_in_different_scope.ll
 ERR = test_double_declaration_variable.ll test_not_found_variable.ll
 
-COMPILATEUR = Lang	
+EXECUTABLE_PATH = ../bin/compiler	
 
-.PHONY: compilateur
+.PHONY: all compilateur void int float condition boucle sub err
 
 all	: compilateur void int float condition boucle sub err
-
-compilateur	:
-	$(MAKE) -sC $(COMPILATEUR)
 
 void	: $(VOID)
 
@@ -32,10 +31,9 @@ sub	: $(SUB)
 err	: $(ERR)
 
 %.ll: %.c
-	./Lang/prog < $< 1> $@
+	$(EXECUTABLE_PATH) < $< 1> $@
 
 clean:
-	$(MAKE) -sC $(COMPILATEUR) clean
-	rm -f *.ll 
+	rm -f *.ll *~ \#*
 
 

@@ -17,7 +17,7 @@ void alloc(list_of *l) {
     l->size_max++;
   } 
   else {
-    realloc(l->nodes, sizeof(node) * l->size_max * 2);
+    l->nodes = realloc(l->nodes, sizeof(node) * l->size_max * 2);
     l->size_max *= 2;
   }
 }
@@ -25,15 +25,15 @@ void alloc(list_of *l) {
 void argument_alloc(node *n) {
   if (n->size_max == 0) { 
     n->arguments = malloc(sizeof(node));
-    l->size_max++;
+    n->size_max++;
   } 
   else {
-    realloc(n->arguments, sizeof(node) * n->size_max * 2);
+    n->arguments = realloc(n->arguments, sizeof(node) * n->size_max * 2);
     n->size_max *= 2;
   }
 }
 
-void add_symbol_node(list_of *l, enum_type t, sid name) {
+void add_symbol_node(list_of *l, enum type t, sid name) {
   symbol s;
   s.name = strdup(name);
   s.type = t;
@@ -53,12 +53,47 @@ void add_argument_node(node *n, enum type t, sid name) {
   s.name = strdup(name);
   s.type = t;
   argument_alloc(n);
-  n->arguments[n->size] = s;
-  n->size++
+  n->arguments[n->size].s = s;
+  n->size++;
 }
 
-void free_node(list_of *l) {
-
+void free_list(list_of *l) {
+  int i = 0;
+  int n = l->size;
+  while ( i < n) {
+    free(l->nodes[i].arguments);
+    ++i;
+  }
+  free(l->nodes);
+  free(l);
 }
 
 
+void display_list_of(list_of *l) {
+  int i = 0;
+   int n = l->size;
+   while ( i < n) {
+     if(l->e_t == SYMBOL) {
+       display_function(l->nodes[i]);
+     }
+     else {
+       display_registre((l->nodes[i]).r);
+     }
+     ++i;
+   }
+ }
+
+ void display_registre(registre r) {
+   printf("registre: %d, %d\n",r.reg_id, r.reg_type);
+ }
+
+ void display_function(node n) {
+   printf("function: %s, %d\n",(n.s).name, (n.s).type);
+   int i = 0;
+   int size = n.size;
+   while (i < size) {
+     symbol s = n.arguments[i].s;
+    printf("parameters: %s, %d\n",s.name, s.type);
+    ++i;
+  }
+}

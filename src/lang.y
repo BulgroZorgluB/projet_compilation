@@ -132,8 +132,49 @@
    return type_string;
  }
 
+ void add_new_variables(node n) {
+   int size = n.size;
+   elem variable_values[size];
+   char *string_type[size];
+   int i = 0;
+   while ( i < size) {
+     symbol s = (n.arguments[i]).s;
+     variable_values[i] = create_elem(s.name, s.type);
+     add_symbol(variable_values[i]);
+     printf("\t ");
+     display_symbol_id(variable_values[i].symbol_name);
+     string_type[i] = string_of_type(s.type);
+     printf(" = alloca %s\n", string_type[i]);
+     ++i;
+   }
+   i = 0;
+   while (i < size) {
+     symbol s = (n.arguments[i]).s;
+     printf("\t store %s %%%s, %s* %s\n", string_type[i], s.name, string_type[i], variable_values[i].symbol_name->symbol_name);
+     ++i;
+   }
+ }
+
  void printf_symbol(symbol s) {
    printf("%s %%%s", string_of_type(s.type), s.name);
+ }
+
+ void printf_registre(registre r) {
+   printf("%s %%r%i", string_of_type(r.reg_type), r.reg_id);
+ }
+
+ void printf_call_parameters(list_of *l) {
+   int size = l->size;
+   int i = 0;
+   if( size != 0) {
+     printf_registre((l->nodes[i]).r);
+     ++i;
+     while ( i < size) {
+       printf(", ");
+       printf_registre((l->nodes[i]).r);
+       ++i;
+       }
+   }
  }
 
  void printf_parameters(node n) {
@@ -141,7 +182,7 @@
    int i = 0;
    printf_symbol((n.arguments[i]).s);
    ++i;
-   while ( i < n.size) {
+   while ( i < size) {
      printf(", ");
      printf_symbol((n.arguments[i]).s);
      ++i;
@@ -198,7 +239,7 @@ sera lue comme un char * (le type de sid). */
 
 %type <sid> fun_name
 %type <t> typename /*type*/
-%type <reg> exp bool  /* attribut d’une expr = valeur entiere */
+%type <reg> exp bool fun_app  /* attribut d’une expr = valeur entiere */
 %type <lab> else while do bool_cond and or
 
 %start prog
@@ -238,18 +279,24 @@ fun_head : fun_name PO PF
 }
 | fun_name PO param_list PF {
   char * type_string = string_of_type($<t>0);
+  node n = function_list->nodes[(function_list->size) - 1];
   add_symbol(create_elem($1, $<t>0));
   printf("define %s @%s(", type_string, $1);
-  printf_parameters(function_list->nodes[(function_list->size) - 1]);
+  printf_parameters(n);
   printf("){\n");
   printf("L%i:\n", new_simple_label().one);
 };
 
 fun_name : ID {$$ = $1; function_list = add_symbol_node(function_list, $<t>0, $$);};
 
-fun_body : ao block af {printf("}\n");};
+fun_body : ao fun_start block af {printf("}\n");};
 
 ao: AO {add_bloc();}
+
+fun_start: { 
+  node n = function_list->nodes[(function_list->size) - 1];
+  add_new_variables(n);
+};
 
 af: AF {remove_bloc();}
 
@@ -339,13 +386,68 @@ do : DO {
      };
 
        
-fun_app : ID PO args PF;
+fun_app : ID PO args PF 
+{
+  int i = function_index(function_list, $1);
+  if( i == -1) {
+    printf("ID in fun_app\n");
+    yyerror("symbol not found !");    
+  }
+  node function = function_list->nodes[i];
+  if(arg_list->size != function.size ) {
+    printf("size in fun_app\n");
+    yyerror("not the same size");
+  }
+  int j = 0;
+  while (j < function.size) {
+    symbol s = (function.arguments[j]).s;
+    node arg = arg_list->nodes[j];
+    char * type_string = string_of_type(s.type);
+    printf("\t %%r%i = load %s, %s* %%", (arg.r).reg_id, type_string, type_string); 
+    display_symbol_id(arg.name);
+    printf("\n");
+    if((arg.r).reg_type != s.type) {
+      registre tmp;
+      if((arg.r).reg_type == T_INT) {
+	arg_list->nodes[j].r = new_reg(T_FLOAT);
+	tmp = arg_list->nodes[j].r;
+	convert_int_to_float(tmp.reg_id, (arg.r).reg_id);
+      }
+      else {
+	arg_list->nodes[j].r = new_reg(T_INT);
+	tmp = arg_list->nodes[j].r;
+	convert_float_to_int(tmp.reg_id, (arg.r).reg_id);
+      }
+    }
+    ++j;
+  }
+  $$ = new_reg(function.s.type);
+  char * string_type = string_of_type(function.s.type);
+  printf("\t %%r%i = call %s @%s(", $$.reg_id, string_type, function.s.name);
+  printf_call_parameters(arg_list);
+  printf(")\n");
+};
 
 args : arglist
 | ;
 
-arglist : ID VIR arglist
-| ID;
+arglist : ID VIR arglist {
+  elem symbol = find_elem_from_name($1);
+  if (symbol.symbol_name == NULL) {
+    printf("ID in arg_list\n");
+    yyerror("symbol not found !");    
+  }
+  arg_list = add_registre_node(arg_list, new_reg(symbol.symbol_type), symbol.symbol_name);
+}
+| ID 
+{
+  elem symbol = find_elem_from_name($1);
+  if (symbol.symbol_name == NULL) {
+    printf("ID in arg_list\n");
+    yyerror("symbol not found !");    
+  }
+  arg_list = add_registre_node(arg_list, new_reg(symbol.symbol_type), symbol.symbol_name);
+};
 
 aff : ID EQ exp PV {
   elem symbol = find_elem_from_name($1);
@@ -536,6 +638,7 @@ MOINS exp %prec UNA {
 | ID {
   elem symbol = find_elem_from_name($1);
   if(symbol.symbol_type == T_VOID) {
+    printf("ID in exp\n");
     yyerror("symbol not found !\n");
   }
   $$ = new_reg(symbol.symbol_type);
@@ -547,7 +650,7 @@ MOINS exp %prec UNA {
   printf("\t %%r%i = add i32 %i, 0\n", $$.reg_id, $1); }
 | CONSTANTF {$$ = new_reg(T_FLOAT);
   printf("\t %%r%i = fadd float %s, %s \n", $$.reg_id, float_to_hex($1), float_to_hex(0.0)); } 
-| fun_app {$$ = new_reg(T_INT); printf("R%i = TODO\n", $$.reg_id); }
+| fun_app {$$ = $1; }
 ;
 
 

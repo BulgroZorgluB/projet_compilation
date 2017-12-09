@@ -40,6 +40,6 @@ void decrement_depth_control();
 
 enum type type_last_bloc();
 
-
+elem get_last_symbol();
 
 #endif //_SYMBOL_TABLE_H

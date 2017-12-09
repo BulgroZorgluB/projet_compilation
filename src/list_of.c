@@ -53,10 +53,10 @@ list_of* add_symbol_node(list_of *l, enum type t, sid name) {
   return l;
 }
 
-list_of* add_registre_node(list_of *l, registre r) {
+list_of* add_registre_node(list_of *l, registre r, symbol_id *name) {
   l = alloc(l);
   l->nodes[l->size].r = r;
-  init_node(&(l->nodes[l->size]));
+  l->nodes[l->size].name = name;
   l->size++;
   return l;
 }
@@ -110,5 +110,18 @@ void display_list_of(list_of *l) {
     printf("parameters: %s, %d\n",s.name, s.type);
     ++i;
   }
+}
+
+int function_index(list_of *l, sid name) {
+  int i = 0;
+  int n = l->size;
+  while ( i < n) {
+    symbol s = l->nodes[i].s;
+    if(strcmp(s.name, name) == 0) {
+      return i;
+    }
+    ++i;
+  }
+  return -1;
 }
 

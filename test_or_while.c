@@ -5,7 +5,7 @@ int f() {
   i = 10;
   j = 42;
   n = 0;
-  while (i > 0 && j<100) do {
+  while (i > 0 || j<100) do {
       n = n + 1;
       i = i - 1;
       j = j + 1;

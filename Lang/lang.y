@@ -180,7 +180,7 @@ sera lue comme un char * (le type de sid). */
 
 %type <t> typename /*type*/
 %type <reg> exp bool  /* attribut d’une expr = valeur entiere */
-%type <lab> else while do bool_cond and
+%type <lab> else while do bool_cond and or
 
 %start prog
 
@@ -397,7 +397,7 @@ exp INF exp {
   printf_operation($$, $1, $3, operation_type_name, "ne "); }
 | bool and bool {$$ = $3;}
 
-| bool or bool 
+| bool or bool {$$ = $3;}
 
 | NOT bool {$$ = new_reg($2.reg_type); printf("\t %%r%i = ! R%i;\n", $$.reg_id, $2.reg_id); }
 | PO bool PF{$$ = $2;};
@@ -416,7 +416,7 @@ and: AND {
   }
   else {
     label_displayed = label_true;
-    label_out = $<lab>-2.one;
+    label_out = label_false + 1;
   }
   printf("\t br i1 %%r%i, label %%L%i, label %%L%i\n", $<reg>0.reg_id,label_true, label_false);
   printf("L%i:\n", label_false);
@@ -424,7 +424,27 @@ and: AND {
   printf("L%i:\n", label_displayed);
 };
 
-or: OR;
+or: OR {
+  int label_true;
+  int label_false;
+  int label_displayed;
+  int label_out;
+  $$ = new_double_label(); 
+  label_true = $$.one;
+  label_false = $$.two;
+  if(lt != T_DO_WHILE) {
+    label_displayed = label_true;
+    label_out = label_displayed + 3;
+  }
+  else {
+    label_displayed = label_true;
+    label_out = label_displayed+2;
+  }
+  printf("\t br i1 %%r%i, label %%L%i, label %%L%i\n", $<reg>0.reg_id,label_true, label_false);
+  printf("L%i:\n", label_false);
+  printf("\t br label %%L%i\n", label_out);
+  printf("L%i:\n", label_displayed);
+};
 
 // Comment faire à la place une évaluation "paresseuse" des booléens ?
 // Idée: le programme produit pour coder un booléen est un morceau de code c associé à deux labels,

@@ -360,7 +360,7 @@ bool_cond : PO bool PF {
     label_false = $$.one;
     label_displayed = label_false;
   }
-  printf("\t br i1 %%r%i, label %%L%i, label %%L%i\n", $2.reg_id,label_true, label_false);
+  printf("\t br i1 %%r%i, label %%L%i, label %%L%i\n", $2.reg_id, label_true, label_false);
   printf("L%i:\n", label_displayed);
 };
 	      // l'attribut du if est juste avant sur la pile.
@@ -406,25 +406,21 @@ and: AND {
   int label_true;
   int label_false;
   int label_displayed;
-  if(lt == NONE) {
-    increment_depth_control();
-  }
+  int label_out;
+  $$ = new_double_label(); 
+  label_true = $$.one;
+  label_false = $$.two;
   if(lt != T_DO_WHILE) {
-    $$ = new_double_label(); 
-    label_true = $$.one;
-    label_false = $$.two;
     label_displayed = label_true;
+    label_out = label_displayed + 3;
   }
   else {
-    $$ = new_double_label(); //besoin d'un double label ici !!!!
-    label_true = $$.two;
-    label_false = $$.one;
     label_displayed = label_true;
+    label_out = $<lab>-2.one;
   }
   printf("\t br i1 %%r%i, label %%L%i, label %%L%i\n", $<reg>0.reg_id,label_true, label_false);
-  //  printf("L%i:\n", label_displayed+1);
   printf("L%i:\n", label_false);
-  printf("\t br label %%L%i\n", label_displayed+3);
+  printf("\t br label %%L%i\n", label_out);
   printf("L%i:\n", label_displayed);
 };
 

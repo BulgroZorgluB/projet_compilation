@@ -1,7 +1,6 @@
 %{ 
 #include "utile.h"  
 #include "y.tab.h"
-#include "Table_des_symboles.h"
 	
 %}
 D[0-9]

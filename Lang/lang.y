@@ -356,7 +356,7 @@ bool_cond : PO bool PF {
   }
   else {
     $$ = new_simple_label();
-    label_true = $<lab>0.one;
+    label_true = $<lab>-4.one;
     label_false = $$.one;
     label_displayed = label_false;
   }
@@ -407,7 +407,7 @@ and: AND {
   int label_false;
   int label_displayed;
   if(lt == NONE) {
-    increment_depth_control();
+    //increment_depth_control();
   }
   if(lt != T_DO_WHILE) {
     $$ = new_double_label(); 

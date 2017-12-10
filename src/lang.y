@@ -8,6 +8,7 @@
 #include "list_of.h"
 
   static int label_n = 0;
+  static int line_number = 1;
   
   static enum loop_type *lt;
   static int loop_depth= -1;
@@ -15,6 +16,11 @@
   static list_of *arg_list;
   static list_of *function_list;
 
+  void increment_line_number() {
+    line_number++;
+  }
+
+  
   void init_loop_depth() {
     lt = malloc(sizeof(enum loop_type));
   }
@@ -33,7 +39,7 @@
   }
   
   void yyerror (char* s) {
-    fprintf(stderr,"error: %s\n",s);
+    fprintf(stderr,"line %d, error: %s\n", line_number, s);
     exit(EXIT_SUCCESS);
   }
 
@@ -259,7 +265,7 @@ sera lue comme un char * (le type de sid). */
 %nonassoc ELSE
 
 %type <sid> fun_name
-%type <t> typename /*type*/
+%type <t> typename 
 %type <reg> exp bool fun_app  /* attribut d’une expr = valeur entiere */
 %type <lab> else while do bool_cond and or
 
@@ -335,8 +341,8 @@ af: AF {
 };
 
 type
-: typename pointer //{$$ = strcat($1, "*");} TODO : marche pas
-| typename /*{$$ = $1;}*/
+: typename pointer 
+| typename 
 ;
 
 typename
@@ -356,7 +362,7 @@ param_list: type ID vir param_list {add_argument_node(function_list, $<t>1, $2);
 vlist: ID vir vlist {
   elem x = create_elem($1,$<t>0);
   if(search_symbol_in_bloc(x)) {
-    yyerror("variable already created !");
+    yyerror("variable already created");
   }
   char * type_string = string_of_type(x.symbol_type);
   printf("\t %%");
@@ -366,7 +372,7 @@ vlist: ID vir vlist {
 | ID {
   elem x = create_elem($1,$<t>0);
   if(search_symbol_in_bloc(x)) {
-    yyerror("variable already created !");
+    yyerror("variable already created");
   }  
   char * type_string = string_of_type(x.symbol_type);
   printf("\t %%");
@@ -422,11 +428,11 @@ fun_app : ID PO args PF
 {
   int i = function_index(function_list, $1);
   if( i == -1) {
-    yyerror("symbol not found !");    
+    yyerror("symbol not found in context");    
   }
   node function = function_list->nodes[i];
   if(arg_list->size != function.size ) {
-    yyerror("not the same size");
+    yyerror("parameter number not equal to argument function number ");
   }
   int j = 0;
   while (j < function.size) {
@@ -467,7 +473,7 @@ args : arglist
 arglist : ID VIR arglist {
   elem symbol = find_elem_from_name($1);
   if (symbol.symbol_name == NULL) {
-    yyerror("symbol not found !");    
+    yyerror("symbol not found in context");    
   }
   arg_list = add_registre_node(arg_list, new_reg(symbol.symbol_type), symbol.symbol_name);
 }
@@ -475,7 +481,7 @@ arglist : ID VIR arglist {
 {
   elem symbol = find_elem_from_name($1);
   if (symbol.symbol_name == NULL) {
-    yyerror("symbol not found !");    
+    yyerror("symbol not found in context");    
   }
   arg_list = add_registre_node(arg_list, new_reg(symbol.symbol_type), symbol.symbol_name);
 };
@@ -483,10 +489,10 @@ arglist : ID VIR arglist {
 aff : ID EQ exp PV {
   elem symbol = find_elem_from_name($1);
   if( symbol.symbol_type == T_VOID) {
-    yyerror("symbol not found !");
+    yyerror("symbol not found in context");
   }
   if ($3.reg_type == T_VOID) {
-    yyerror("trying to aff void value");
+    yyerror("trying to affect an variable with void type");
   }
   registre tmp;
   if ($3.reg_type != symbol.symbol_type) {
@@ -512,7 +518,7 @@ ret : RETURN PV
 | RETURN exp PV {
   enum type return_type = type_last_bloc();
   if(return_type == VOID) {
-    yyerror("void type returning something");
+    yyerror("void function return a value");
   }
   convert_to_function_type(return_type, &$2);
   char* string_type = string_of_type(return_type);
@@ -685,7 +691,7 @@ MOINS exp %prec UNA {
 | ID {
   elem symbol = find_elem_from_name($1);
   if(symbol.symbol_type == T_VOID) {
-    yyerror("symbol not found !\n");
+    yyerror("symbol not found in context");
   }
   $$ = new_reg(symbol.symbol_type);
   char * type_string = string_of_type(symbol.symbol_type);

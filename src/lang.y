@@ -145,7 +145,7 @@
      type_string = S_FLOAT;
      break;
    default:
-     type_string = "";
+     type_string = S_VOID;
      break;
    }
    return type_string;
@@ -328,8 +328,11 @@ af: AF {
   if(get_depth_control() != 0) {
     decrement_depth_control();
   }
+  if(get_depth_bloc() == 1 && type_last_bloc() == T_VOID)  {
+    printf("\t ret void\n");
+  }
   remove_bloc();
-}
+};
 
 type
 : typename pointer //{$$ = strcat($1, "*");} TODO : marche pas
@@ -680,7 +683,7 @@ MOINS exp %prec UNA {
 
 | exp DIV exp {
   $$ = new_reg(op_type(&$1, &$3)); 
-  char * operation_type_name[TYPE_NUMBER] = {"", "div", "fdiv"};
+  char * operation_type_name[TYPE_NUMBER] = {"", "sdiv", "fdiv"};
   printf_operation($$, $1, $3, operation_type_name, ""); }
 
 | PO exp PF {$$=$2;}

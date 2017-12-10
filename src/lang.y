@@ -557,7 +557,7 @@ exp INF exp {
 
 | bool or bool UNA {$$ = $3;}
 
-| NOT bool {$$ = new_reg($2.reg_type); printf("\t %%r%i = ! R%i;\n", $$.reg_id, $2.reg_id); }
+| NOT bool {$$ = new_reg($2.reg_type); printf("\t %%r%i = xor 1, R%i;\n", $$.reg_id, $2.reg_id); }
 | PO bool PF{$$ = $2;};
 
 and: AND {

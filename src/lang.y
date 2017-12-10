@@ -8,11 +8,30 @@
 #include "list_of.h"
 
   static int label_n = 0;
-  static enum loop_type lt = NONE;
+  
+  static enum loop_type *lt;
+  static int loop_depth= -1;
+  
   static list_of *arg_list;
   static list_of *function_list;
 
+  void init_loop_depth() {
+    lt = malloc(sizeof(enum loop_type));
+  }
+  
+  void add_loop_depth() {
+    loop_depth++;
+    lt = realloc(lt, sizeof(enum loop_type) * (loop_depth + 1));
+  }
 
+  void remove_loop_depth() {
+    loop_depth--;
+  }
+
+  void free_loop_depth() {
+    free(lt);
+  }
+  
   void yyerror (char* s) {
     fprintf(stderr,"error: %s\n",s);
     exit(1);
@@ -248,9 +267,9 @@ sera lue comme un char * (le type de sid). */
 
 %%
 
-prog : init block  {destroy_table();}; 
+prog : init block {destroy_table(); free_loop_depth();}; 
 
-init: {create_table(); arg_list = init_list(REGISTER); function_list = init_list(SYMBOL);};
+init: {create_table(); init_loop_depth(); arg_list = init_list(REGISTER); function_list = init_list(SYMBOL);};
 
 block:
 decl_list inst_list
@@ -351,35 +370,37 @@ inst_list: inst inst_list
 inst:
 exp PV
 | ao block af
-| cond
-| loop
+| init_lt cond
+| init_lt loop
 | aff
 | ret
 | PV;
 
-loop : while bool_cond do ao block af { lt = NONE; decrement_depth_control(); printf("\t br label %%L%i\n", $1.one);
+init_lt: {add_loop_depth(); lt[loop_depth] = NONE;};
+
+loop : while bool_cond do ao block af { remove_loop_depth(); decrement_depth_control(); printf("\t br label %%L%i\n", $1.one);
     printf("L%i: \n", $2.two);}
-| do ao block af while bool_cond PV {lt = NONE;}
+| do ao block af while bool_cond PV {remove_loop_depth();}
 ;
 
  while : WHILE {
-   if(lt == NONE) { 
+   if(lt[loop_depth] == NONE) { 
     $$ = new_simple_label();
     printf("\t br label %%L%i \n", $$.one);
     printf("L%i: \n", $$ .one);
-    lt = T_WHILE_DO; 
+    lt[loop_depth] = T_WHILE_DO; 
    }
-   else if(lt == T_DO_WHILE) {
+   else if(lt[loop_depth] == T_DO_WHILE) {
      decrement_depth_control();
    }
 };
 
 do : DO {
-  if(lt == NONE) {
+  if(lt[loop_depth] == NONE) {
     $$ = new_simple_label();
     printf("\t br label %%L%i \n", $$.one);
     printf("L%i: \n", $$.one);
-    lt = T_DO_WHILE;
+    lt[loop_depth] = T_DO_WHILE;
   }
   add_symbol(create_elem("do", T_VOID));
   increment_depth_control();
@@ -426,6 +447,9 @@ fun_app : ID PO args PF
   printf("\t %%r%i = call %s @%s(", $$.reg_id, string_type, function.s.name);
   printf_call_parameters(arg_list);
   printf(")\n");
+
+  //init for a new call.
+  arg_list->size = 0;
 };
 
 args : arglist
@@ -476,10 +500,10 @@ bool_cond : PO bool PF {
   int label_true;
   int label_false;
   int label_displayed;
-  if(lt == NONE) {
+  if(lt[loop_depth] == NONE) {
     increment_depth_control();
   }
-  if(lt != T_DO_WHILE) {
+  if(lt[loop_depth] != T_DO_WHILE) {
     $$ = new_double_label(); 
     label_true = $$.one;
     label_false = $$.two;
@@ -541,7 +565,7 @@ and: AND {
   $$ = new_double_label(); 
   label_true = $$.one;
   label_false = $$.two;
-  if(lt != T_DO_WHILE) {
+  if(lt[loop_depth] != T_DO_WHILE) {
     label_displayed = label_true;
     label_out = label_displayed + 3; // label_false du bool suivant
   }
@@ -563,7 +587,7 @@ or: OR {
   $$ = new_double_label(); 
   label_true = $$.one;
   label_false = $$.two;
-  if(lt != T_DO_WHILE) {
+  if(lt[loop_depth] != T_DO_WHILE) {
     label_displayed = label_false;
     label_out = label_displayed + 1; //label_true du bool suivant
   }

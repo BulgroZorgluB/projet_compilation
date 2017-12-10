@@ -27,6 +27,8 @@ typedef struct {
 
 list_of *init_list(enum elem_type e_t);
 
+void re_init(list_of *l);
+
 list_of *add_symbol_node(list_of *l, enum type t, sid name);
 
 list_of *add_registre_node(list_of *l, registre r, symbol_id *name);

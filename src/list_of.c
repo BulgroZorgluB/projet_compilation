@@ -36,7 +36,7 @@ void argument_alloc(node *n) {
   }
 }
 
-init_node(node *n) {
+void init_node(node *n) {
   n->size = 0;
   n->size_max = 0;
 }

@@ -9,9 +9,6 @@ int f() {
       n = n + 1;
       i = i - 1;
       j = j + 1;
-      /*  while (i < j) do {
-	  j = j - i;
-	  }*/
     }
   return n;
 }

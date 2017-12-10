@@ -3,18 +3,6 @@
 
 #include "utile.h"
 
-typedef void* sid;
-
-typedef struct {
-  sid symbol_name;
-  int symbol_bloc;
-} symbol_id;
-
-typedef struct {
-  symbol_id* symbol_name;
-  enum type symbol_type; 
-} elem;
-
 struct linked_list{
   struct linked_list *next;
   elem value;

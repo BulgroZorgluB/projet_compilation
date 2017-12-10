@@ -1,5 +1,4 @@
-int f()
-{
+int f() {
   int a;
   int b;
   int c;
@@ -10,11 +9,6 @@ int f()
     a = 7;
   } else {
     a = 12;
-  }
-  if (a!=b && a!=c) {
-    a = b;
-  } else {
-    a = b + c;
   }
   return a;
 }

@@ -4,10 +4,14 @@
 #include <string.h>
 #include "utile.h"
 #include "symbol_table.h"
-#include "conv_hex.h"
+#include "conv_hex.h" 
+#include "list_of.h"
 
   static int label_n = 0;
   static enum loop_type lt = NONE;
+  static list_of *arg_list;
+  static list_of *function_list;
+
 
   void yyerror (char* s) {
     fprintf(stderr,"error: %s\n",s);
@@ -78,7 +82,7 @@
        convert_int_to_float(tmp.reg_id, op1->reg_id);
        copy_registre(op1, tmp);
        
-     }
+      }
      else if (op2->reg_type == T_INT) {
        registre tmp = new_reg(T_FLOAT);
        convert_int_to_float(tmp.reg_id, op2->reg_id);
@@ -128,7 +132,62 @@
    return type_string;
  }
 
+ void add_new_variables(node n) {
+   int size = n.size;
+   elem variable_values[size];
+   char *string_type[size];
+   int i = 0;
+   while ( i < size) {
+     symbol s = (n.arguments[i]).s;
+     variable_values[i] = create_elem(s.name, s.type);
+     add_symbol(variable_values[i]);
+     printf("\t ");
+     display_symbol_id(variable_values[i].symbol_name);
+     string_type[i] = string_of_type(s.type);
+     printf(" = alloca %s\n", string_type[i]);
+     ++i;
+   }
+   i = 0;
+   while (i < size) {
+     symbol s = (n.arguments[i]).s;
+     printf("\t store %s %%%s, %s* %s\n", string_type[i], s.name, string_type[i], variable_values[i].symbol_name->symbol_name);
+     ++i;
+   }
+ }
 
+ void printf_symbol(symbol s) {
+   printf("%s %%%s", string_of_type(s.type), s.name);
+ }
+
+ void printf_registre(registre r) {
+   printf("%s %%r%i", string_of_type(r.reg_type), r.reg_id);
+ }
+
+ void printf_call_parameters(list_of *l) {
+   int size = l->size;
+   int i = 0;
+   if( size != 0) {
+     printf_registre((l->nodes[i]).r);
+     ++i;
+     while ( i < size) {
+       printf(", ");
+       printf_registre((l->nodes[i]).r);
+       ++i;
+       }
+   }
+ }
+
+ void printf_parameters(node n) {
+   int size = n.size;
+   int i = 0;
+   printf_symbol((n.arguments[i]).s);
+   ++i;
+   while ( i < size) {
+     printf(", ");
+     printf_symbol((n.arguments[i]).s);
+     ++i;
+   }
+}
 
 %}
 
@@ -155,7 +214,7 @@ sera lue comme un char * (le type de sid). */
 %token <n> CONSTANTI /* attribut d’une constante entière = int */
 %token <f> CONSTANTF /* attribut d’une constante flottante = float */
 
-%token <sid> ID  /* attribut d’un registre = sid */
+%token <sid> ID /* attribut d’un registre = sid */
 
 %token IF ELSE
 
@@ -178,9 +237,10 @@ sera lue comme un char * (le type de sid). */
 %nonassoc UNA    /* pseudo token pour assurer une priorite locale */
 %nonassoc ELSE
 
+%type <sid> fun_name
 %type <t> typename /*type*/
-%type <reg> exp bool  /* attribut d’une expr = valeur entiere */
-%type <lab> else while do bool_cond and
+%type <reg> exp bool fun_app  /* attribut d’une expr = valeur entiere */
+%type <lab> else while do bool_cond and or
 
 %start prog
 
@@ -190,7 +250,7 @@ sera lue comme un char * (le type de sid). */
 
 prog : init block  {destroy_table();}; 
 
-init: {create_table();};
+init: {create_table(); arg_list = init_list(REGISTER); function_list = init_list(SYMBOL);};
 
 block:
 decl_list inst_list
@@ -210,17 +270,33 @@ fun_decl : type fun;
 
 fun : fun_head fun_body;
 
-fun_head : ID PO PF 
+fun_head : fun_name PO PF 
 {
   char * type_string = string_of_type($<t>0);
   add_symbol(create_elem($1, $<t>0));
   printf("define %s @%s() {\n",type_string, $1);
-  printf("L%i:\n", new_simple_label().one);}
-| ID PO param_list PF;
+  printf("L%i:\n", new_simple_label().one);
+}
+| fun_name PO param_list PF {
+  char * type_string = string_of_type($<t>0);
+  node n = function_list->nodes[(function_list->size) - 1];
+  add_symbol(create_elem($1, $<t>0));
+  printf("define %s @%s(", type_string, $1);
+  printf_parameters(n);
+  printf("){\n");
+  printf("L%i:\n", new_simple_label().one);
+};
 
-fun_body : ao block af {printf("}\n");};
+fun_name : ID {$$ = $1; function_list = add_symbol_node(function_list, $<t>0, $$);};
+
+fun_body : ao fun_start block af {printf("}\n");};
 
 ao: AO {add_bloc();}
+
+fun_start: { 
+  node n = function_list->nodes[(function_list->size) - 1];
+  add_new_variables(n);
+};
 
 af: AF {remove_bloc();}
 
@@ -240,8 +316,8 @@ pointer
 | STAR
 ;
 
-param_list: type ID vir param_list
-| type ID;
+param_list: type ID vir param_list {add_argument_node(function_list, $<t>1, $2);}
+| type ID {add_argument_node(function_list, $<t>1, $2);};
 
 vlist: ID vir vlist {
   elem x = create_elem($1,$<t>0);
@@ -310,13 +386,68 @@ do : DO {
      };
 
        
-fun_app : ID PO args PF;
+fun_app : ID PO args PF 
+{
+  int i = function_index(function_list, $1);
+  if( i == -1) {
+    printf("ID in fun_app\n");
+    yyerror("symbol not found !");    
+  }
+  node function = function_list->nodes[i];
+  if(arg_list->size != function.size ) {
+    printf("size in fun_app\n");
+    yyerror("not the same size");
+  }
+  int j = 0;
+  while (j < function.size) {
+    symbol s = (function.arguments[j]).s;
+    node arg = arg_list->nodes[j];
+    char * type_string = string_of_type(s.type);
+    printf("\t %%r%i = load %s, %s* %%", (arg.r).reg_id, type_string, type_string); 
+    display_symbol_id(arg.name);
+    printf("\n");
+    if((arg.r).reg_type != s.type) {
+      registre tmp;
+      if((arg.r).reg_type == T_INT) {
+	arg_list->nodes[j].r = new_reg(T_FLOAT);
+	tmp = arg_list->nodes[j].r;
+	convert_int_to_float(tmp.reg_id, (arg.r).reg_id);
+      }
+      else {
+	arg_list->nodes[j].r = new_reg(T_INT);
+	tmp = arg_list->nodes[j].r;
+	convert_float_to_int(tmp.reg_id, (arg.r).reg_id);
+      }
+    }
+    ++j;
+  }
+  $$ = new_reg(function.s.type);
+  char * string_type = string_of_type(function.s.type);
+  printf("\t %%r%i = call %s @%s(", $$.reg_id, string_type, function.s.name);
+  printf_call_parameters(arg_list);
+  printf(")\n");
+};
 
 args : arglist
 | ;
 
-arglist : ID VIR arglist
-| ID;
+arglist : ID VIR arglist {
+  elem symbol = find_elem_from_name($1);
+  if (symbol.symbol_name == NULL) {
+    printf("ID in arg_list\n");
+    yyerror("symbol not found !");    
+  }
+  arg_list = add_registre_node(arg_list, new_reg(symbol.symbol_type), symbol.symbol_name);
+}
+| ID 
+{
+  elem symbol = find_elem_from_name($1);
+  if (symbol.symbol_name == NULL) {
+    printf("ID in arg_list\n");
+    yyerror("symbol not found !");    
+  }
+  arg_list = add_registre_node(arg_list, new_reg(symbol.symbol_type), symbol.symbol_name);
+};
 
 aff : ID EQ exp PV {
   elem symbol = find_elem_from_name($1);
@@ -360,7 +491,7 @@ bool_cond : PO bool PF {
     label_false = $$.one;
     label_displayed = label_false;
   }
-  printf("\t br i1 %%r%i, label %%L%i, label %%L%i\n", $2.reg_id,label_true, label_false);
+  printf("\t br i1 %%r%i, label %%L%i, label %%L%i\n", $2.reg_id, label_true, label_false);
   printf("L%i:\n", label_displayed);
 };
 	      // l'attribut du if est juste avant sur la pile.
@@ -397,7 +528,7 @@ exp INF exp {
   printf_operation($$, $1, $3, operation_type_name, "ne "); }
 | bool and bool {$$ = $3;}
 
-| bool or bool 
+| bool or bool {$$ = $3;}
 
 | NOT bool {$$ = new_reg($2.reg_type); printf("\t %%r%i = ! R%i;\n", $$.reg_id, $2.reg_id); }
 | PO bool PF{$$ = $2;};
@@ -406,29 +537,54 @@ and: AND {
   int label_true;
   int label_false;
   int label_displayed;
+<<<<<<< HEAD:Lang/lang.y
   if(lt == NONE) {
     //increment_depth_control();
   }
+=======
+  int label_out;
+  $$ = new_double_label(); 
+  label_true = $$.one;
+  label_false = $$.two;
+>>>>>>> 448960f680af2154cc0bc6a5a4bf656059514a86:src/lang.y
   if(lt != T_DO_WHILE) {
-    $$ = new_double_label(); 
-    label_true = $$.one;
-    label_false = $$.two;
     label_displayed = label_true;
+    label_out = label_displayed + 3; // label_false du bool suivant
   }
   else {
-    $$ = new_double_label(); //besoin d'un double label ici !!!!
-    label_true = $$.two;
-    label_false = $$.one;
     label_displayed = label_true;
+    label_out = label_displayed + 2; // label true du bool suivant
   }
   printf("\t br i1 %%r%i, label %%L%i, label %%L%i\n", $<reg>0.reg_id,label_true, label_false);
-  //  printf("L%i:\n", label_displayed+1);
   printf("L%i:\n", label_false);
-  printf("\t br label %%L%i\n", label_displayed+3);
+  printf("\t br label %%L%i\n", label_out);
   printf("L%i:\n", label_displayed);
 };
 
-or: OR;
+or: OR {
+  int label_true;
+  int label_false;
+  int label_displayed;
+  int label_out;
+  $$ = new_double_label(); 
+  label_true = $$.one;
+  label_false = $$.two;
+  if(lt != T_DO_WHILE) {
+    label_displayed = label_false;
+    label_out = label_displayed + 1; //label_true du bool suivant
+  }
+  else {
+    label_displayed = label_false;
+    label_out = label_displayed - 2; //label qui précède label_true
+    //soit : le label_false du bool précédent (-> marche avec plusieurs 'ou' ?,
+    //sinon essayer de changer l'ordre des deux blocs pour avoir un décalage régulier)
+    //soit : le label du bloc qui appelle cet embranchement
+  }
+  printf("\t br i1 %%r%i, label %%L%i, label %%L%i\n", $<reg>0.reg_id,label_true, label_false);
+  printf("L%i:\n", label_true);
+  printf("\t br label %%L%i\n", label_out);
+  printf("L%i:\n", label_displayed);
+};
 
 // Comment faire à la place une évaluation "paresseuse" des booléens ?
 // Idée: le programme produit pour coder un booléen est un morceau de code c associé à deux labels,
@@ -488,6 +644,7 @@ MOINS exp %prec UNA {
 | ID {
   elem symbol = find_elem_from_name($1);
   if(symbol.symbol_type == T_VOID) {
+    printf("ID in exp\n");
     yyerror("symbol not found !\n");
   }
   $$ = new_reg(symbol.symbol_type);
@@ -499,7 +656,7 @@ MOINS exp %prec UNA {
   printf("\t %%r%i = add i32 %i, 0\n", $$.reg_id, $1); }
 | CONSTANTF {$$ = new_reg(T_FLOAT);
   printf("\t %%r%i = fadd float %s, %s \n", $$.reg_id, float_to_hex($1), float_to_hex(0.0)); } 
-| fun_app {$$ = new_reg(T_INT); printf("R%i = TODO\n", $$.reg_id); }
+| fun_app {$$ = $1; }
 ;
 
 

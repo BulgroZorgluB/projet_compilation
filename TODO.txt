@@ -1,0 +1,8 @@
+quesqu'il reste à faire:
+	  gestion d'erreurs
+	  appel de fonctions
+	  pointeurs
+	  boucles imbriqué ?
+	  refaire le systeme pour differencier les deux styles de boucles
+	  utilisation de la table des symboles
+	  clean les comments et tout 

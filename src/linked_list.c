@@ -148,6 +148,6 @@ void display_list() {
 }
 
 void display_symbol_id(symbol_id *e) {
-  printf("%s_%d", e->symbol_name, e->symbol_bloc);
+  printf("%s.%d", e->symbol_name, e->symbol_bloc);
 }
 

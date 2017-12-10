@@ -117,3 +117,7 @@ void decrement_depth_control() {
 enum type type_last_bloc() {
   return (((table->pointer_bloc[table->depth_bloc - 1 - table->depth_control])->value).symbol_type);
 }
+
+elem get_last_symbol () {
+  return table->last_symbol->value;
+}

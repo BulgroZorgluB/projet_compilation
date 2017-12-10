@@ -24,6 +24,20 @@ typedef struct {
   int two;
 } label;
 
+typedef void* sid;
 
+typedef struct {
+  sid symbol_name;
+  int symbol_bloc;
+} symbol_id;
 
+typedef struct {
+  symbol_id* symbol_name;
+  enum type symbol_type; 
+} elem;
+
+typedef struct {
+  sid name;
+  enum type type;
+} symbol;
 #endif

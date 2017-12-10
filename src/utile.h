@@ -41,4 +41,8 @@ typedef struct {
   sid name;
   enum type type;
 } symbol;
+
+void increment_line_number();
+
+
 #endif

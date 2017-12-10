@@ -1,7 +1,7 @@
 %{ 
 #include "utile.h"  
 #include "y.tab.h"
-	
+
 %}
 D[0-9]
 L[a-zA-Z_]
@@ -37,5 +37,5 @@ L[a-zA-Z_]
 [$]?{L}({L}|{D})* { yylval.sid=strdup(yytext); return(ID); }
 {D}+    	  { yylval.n=atoi(yytext); return(CONSTANTI); }
 {D}+"."{D}*       { yylval.f=atof(yytext); return(CONSTANTF); }
-\n       {;}
+\n       {; increment_line_number();}
 [ \t]    {/* on avale sans rendre la main */; }

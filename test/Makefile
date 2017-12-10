@@ -34,6 +34,6 @@ err	: $(ERR)
 	$(EXECUTABLE_PATH) < $< > $@ 2> $(patsubst %.ll,%.txt, $@)
 
 clean:
-	rm -f *.ll
+	rm -f *.ll $(patsubst %.ll,%.txt, *.ll)
 
 

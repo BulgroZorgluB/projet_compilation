@@ -537,16 +537,10 @@ and: AND {
   int label_true;
   int label_false;
   int label_displayed;
-<<<<<<< HEAD:Lang/lang.y
-  if(lt == NONE) {
-    //increment_depth_control();
-  }
-=======
   int label_out;
   $$ = new_double_label(); 
   label_true = $$.one;
   label_false = $$.two;
->>>>>>> 448960f680af2154cc0bc6a5a4bf656059514a86:src/lang.y
   if(lt != T_DO_WHILE) {
     label_displayed = label_true;
     label_out = label_displayed + 3; // label_false du bool suivant

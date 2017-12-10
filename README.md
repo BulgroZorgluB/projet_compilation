@@ -1,47 +1,17 @@
 ### PROJET DE COMPILATION ###
 Ce dépot contient le projet de compilation réalisé par Baptiste Vergain et Luc Boissieras
 
-### ORGANISATION DU DEPOT ###
-Ce dépot contient deux grandes parties:
-   - Le compilateur dans le dossier "Lang"
-   - Les tests effectués pour vérifier le résultat du compilateur
+### GUIDE D'UTILISATION ###
 
-###  MAKEFILE ###
+make: creer l'executable dans le dossier bin/ avec les sources dans le dossier src/
 
-Un Makefile est à disposition des utilisateurs pour facilier l'utilisation des fonctionnalités du dépôt. Voici les différentes règles mises en places pour l'utilisateur:
+make test_make: creer les fichiers llvm pour le dossier test/
 
-   compilateur:
-	compile le compilateur dans un executable appelé "./Lang/prog";
+make resultat_make: creer les fichiers llvm pour le dossier resultat/
 
-   ensuite, chaque règle utilise le compilateur pour compiler des fichiers C en LLVM:
+make clean: lance le clean pour les 3 parties du projet (src, test, resultat);
 
+./compil.sh $1: lance la compilation(si l'executable est existant) du fichier $1.c avec $1.ll en sortie et $1.txt qui contient les erreurs.
 
-   void:
-	Cette règle compile:
+chaque compilation d'un fichier c en llvm génère un fichier d'erreur qui contient les erreurs( il est donc vide si la compilation du fichier c'est bien passée)
 
-
-   int:
-	Cette règle compile:
-	      - test_constante_int:
-			test l'utilisation de constante entière
-	      - test_variable_int:
-			test l'utilisation de variable entière
-
-  float:
-	Cette règle compile:
-
-
-  condition:
-
-  boucle:
-
-  sub:
-
-  err:
-
-  règle générale:
-  	all:
-	
-	clean:
-	
-  

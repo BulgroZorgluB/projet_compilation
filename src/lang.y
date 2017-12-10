@@ -34,7 +34,7 @@
   
   void yyerror (char* s) {
     fprintf(stderr,"error: %s\n",s);
-    exit(1);
+    exit(EXIT_SUCCESS);
   }
 
   void yywrap () {
@@ -366,7 +366,7 @@ vlist: ID vir vlist {
 | ID {
   elem x = create_elem($1,$<t>0);
   if(search_symbol_in_bloc(x)) {
-    printf("variable already created !");
+    yyerror("variable already created !");
   }  
   char * type_string = string_of_type(x.symbol_type);
   printf("\t %%");
@@ -422,12 +422,10 @@ fun_app : ID PO args PF
 {
   int i = function_index(function_list, $1);
   if( i == -1) {
-    printf("ID in fun_app\n");
     yyerror("symbol not found !");    
   }
   node function = function_list->nodes[i];
   if(arg_list->size != function.size ) {
-    printf("size in fun_app\n");
     yyerror("not the same size");
   }
   int j = 0;
@@ -469,7 +467,6 @@ args : arglist
 arglist : ID VIR arglist {
   elem symbol = find_elem_from_name($1);
   if (symbol.symbol_name == NULL) {
-    printf("ID in arg_list\n");
     yyerror("symbol not found !");    
   }
   arg_list = add_registre_node(arg_list, new_reg(symbol.symbol_type), symbol.symbol_name);
@@ -478,7 +475,6 @@ arglist : ID VIR arglist {
 {
   elem symbol = find_elem_from_name($1);
   if (symbol.symbol_name == NULL) {
-    printf("ID in arg_list\n");
     yyerror("symbol not found !");    
   }
   arg_list = add_registre_node(arg_list, new_reg(symbol.symbol_type), symbol.symbol_name);
@@ -487,7 +483,6 @@ arglist : ID VIR arglist {
 aff : ID EQ exp PV {
   elem symbol = find_elem_from_name($1);
   if( symbol.symbol_type == T_VOID) {
-    printf("ID in aff %s\n", $1);
     yyerror("symbol not found !");
   }
   if ($3.reg_type == T_VOID) {
@@ -690,7 +685,6 @@ MOINS exp %prec UNA {
 | ID {
   elem symbol = find_elem_from_name($1);
   if(symbol.symbol_type == T_VOID) {
-    printf("ID in exp %s\n", $1);
     yyerror("symbol not found !\n");
   }
   $$ = new_reg(symbol.symbol_type);

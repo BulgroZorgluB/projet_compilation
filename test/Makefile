@@ -31,9 +31,9 @@ sub	: $(SUB)
 err	: $(ERR)
 
 %.ll: %.c
-	$(EXECUTABLE_PATH) < $< 1> $@
+	$(EXECUTABLE_PATH) < $< > $@ 2> $(patsubst %.ll,%.txt, $@)
 
 clean:
-	rm -f *.ll *~ \#*
+	rm -f *.ll
 
 

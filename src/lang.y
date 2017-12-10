@@ -588,18 +588,17 @@ or: OR {
   int label_displayed;
   int label_out;
   $$ = new_double_label(); 
-  label_true = $$.one;
-  label_false = $$.two;
   if(lt[loop_depth] != T_DO_WHILE) {
+    label_true = $$.one;
+    label_false = $$.two;
     label_displayed = label_false;
     label_out = label_displayed + 1; //label_true du bool suivant
   }
   else {
+    label_false = $$.one;
+    label_true = $$.two;
     label_displayed = label_false;
-    label_out = label_displayed - 2; //label qui précède label_true
-    //soit : le label_false du bool précédent (-> marche avec plusieurs 'ou' ?,
-    //sinon essayer de changer l'ordre des deux blocs pour avoir un décalage régulier)
-    //soit : le label du bloc qui appelle cet embranchement
+    label_out = label_displayed +1 - 2; //label_true du bool précédent
   }
   printf("\t br i1 %%r%i, label %%L%i, label %%L%i\n", $<reg>0.reg_id,label_true, label_false);
   printf("L%i:\n", label_true);

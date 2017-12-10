@@ -310,14 +310,24 @@ fun_name : ID {$$ = $1; function_list = add_symbol_node(function_list, $<t>0, $$
 
 fun_body : ao fun_start block af {printf("}\n");};
 
-ao: AO {add_bloc();}
+ao: AO {
+  if(get_depth_bloc() != 0) {
+    increment_depth_control();
+  }
+  add_bloc();
+}
 
 fun_start: { 
   node n = function_list->nodes[(function_list->size) - 1];
   add_new_variables(n);
 };
 
-af: AF {remove_bloc();}
+af: AF {
+  if(get_depth_control() != 0) {
+    decrement_depth_control();
+  }
+  remove_bloc();
+}
 
 type
 : typename pointer //{$$ = strcat($1, "*");} TODO : marche pas
@@ -378,7 +388,7 @@ exp PV
 
 init_lt: {add_loop_depth(); lt[loop_depth] = NONE;};
 
-loop : while bool_cond do ao block af { remove_loop_depth(); decrement_depth_control(); printf("\t br label %%L%i\n", $1.one);
+loop : while bool_cond do ao block af { remove_loop_depth(); printf("\t br label %%L%i\n", $1.one);
     printf("L%i: \n", $2.two);}
 | do ao block af while bool_cond PV {remove_loop_depth();}
 ;
@@ -390,9 +400,6 @@ loop : while bool_cond do ao block af { remove_loop_depth(); decrement_depth_con
     printf("L%i: \n", $$ .one);
     lt[loop_depth] = T_WHILE_DO; 
    }
-   else if(lt[loop_depth] == T_DO_WHILE) {
-     decrement_depth_control();
-   }
 };
 
 do : DO {
@@ -403,7 +410,6 @@ do : DO {
     lt[loop_depth] = T_DO_WHILE;
   }
   add_symbol(create_elem("do", T_VOID));
-  increment_depth_control();
      };
 
        
@@ -476,7 +482,7 @@ arglist : ID VIR arglist {
 aff : ID EQ exp PV {
   elem symbol = find_elem_from_name($1);
   if( symbol.symbol_type == T_VOID) {
-    printf("ID in aff\n");
+    printf("ID in aff %s\n", $1);
     yyerror("symbol not found !");
   }
   char* string_type = string_of_type(symbol.symbol_type);
@@ -492,17 +498,14 @@ ret : RETURN PV
   printf("\t ret %s %%r%i\n", string_type, $2.reg_id);};
 
 cond :
-if bool_cond inst %prec UNA {decrement_depth_control(); printf("\t br label %%L%i\n", $2.two);printf("L%i:\n",$2.two);}
-| if bool_cond inst else inst {decrement_depth_control(); printf("\t br label %%L%i\n", $4.one);printf("L%i:\n",$4.one);};
+if bool_cond inst %prec UNA { printf("\t br label %%L%i\n", $2.two);printf("L%i:\n",$2.two);}
+| if bool_cond inst else inst { printf("\t br label %%L%i\n", $4.one);printf("L%i:\n",$4.one);};
 
 
 bool_cond : PO bool PF {
   int label_true;
   int label_false;
   int label_displayed;
-  if(lt[loop_depth] == NONE) {
-    increment_depth_control();
-  }
   if(lt[loop_depth] != T_DO_WHILE) {
     $$ = new_double_label(); 
     label_true = $$.one;
@@ -662,7 +665,7 @@ MOINS exp %prec UNA {
 | ID {
   elem symbol = find_elem_from_name($1);
   if(symbol.symbol_type == T_VOID) {
-    printf("ID in exp\n");
+    printf("ID in exp %s\n", $1);
     yyerror("symbol not found !\n");
   }
   $$ = new_reg(symbol.symbol_type);

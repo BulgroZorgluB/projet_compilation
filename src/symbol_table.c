@@ -121,3 +121,11 @@ enum type type_last_bloc() {
 elem get_last_symbol () {
   return table->last_symbol->value;
 }
+
+int get_depth_bloc() {
+  return table->depth_bloc;
+}
+
+int get_depth_control() {
+  return table->depth_control;
+}

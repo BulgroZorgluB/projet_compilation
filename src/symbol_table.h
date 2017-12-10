@@ -42,4 +42,8 @@ enum type type_last_bloc();
 
 elem get_last_symbol();
 
+int get_depth_bloc();
+
+int get_depth_control();
+
 #endif //_SYMBOL_TABLE_H

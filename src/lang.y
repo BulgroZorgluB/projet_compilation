@@ -576,9 +576,9 @@ exp INF exp {
   $$ = new_reg(op_type(&$1, &$3));
   char * operation_type_name[TYPE_NUMBER] = {"", "icmp", "fcmp"};
   printf_operation($$, $1, $3, operation_type_name, "ne "); }
-| bool and bool {$$ = $3;}
+| bool and bool UNA {$$ = $3;}
 
-| bool or bool {$$ = $3;}
+| bool or bool UNA {$$ = $3;}
 
 | NOT bool {$$ = new_reg($2.reg_type); printf("\t %%r%i = ! R%i;\n", $$.reg_id, $2.reg_id); }
 | PO bool PF{$$ = $2;};

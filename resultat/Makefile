@@ -13,4 +13,4 @@ all : compile_test
 compile_test: $(LLVM_FILE)
 
 clean:
-	rm $(LLVM_FILE) 
+	rm $(LLVM_FILE) $(patsubst %.ll,%.txt, $(LLVM_FILE))

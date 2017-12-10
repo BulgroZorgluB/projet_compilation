@@ -34,14 +34,14 @@
   
   void yyerror (char* s) {
     fprintf(stderr,"error: %s\n",s);
-    exit(1);
+    exit(EXIT_SUCCESS);
   }
 
   void yywrap () {
 
   }
 
-  /* generation de numero de registre */
+ /* generation de numero de registre */
 
   registre new_reg(enum type reg_type) {
     registre reg;
@@ -145,7 +145,7 @@
      type_string = S_FLOAT;
      break;
    default:
-     type_string = "";
+     type_string = S_VOID;
      break;
    }
    return type_string;
@@ -160,7 +160,7 @@
      symbol s = (n.arguments[i]).s;
      variable_values[i] = create_elem(s.name, s.type);
      add_symbol(variable_values[i]);
-     printf("\t ");
+     printf("\t %%");
      display_symbol_id(variable_values[i].symbol_name);
      string_type[i] = string_of_type(s.type);
      printf(" = alloca %s\n", string_type[i]);
@@ -169,7 +169,9 @@
    i = 0;
    while (i < size) {
      symbol s = (n.arguments[i]).s;
-     printf("\t store %s %%%s, %s* %s\n", string_type[i], s.name, string_type[i], variable_values[i].symbol_name->symbol_name);
+     printf("\t store %s %%%s, %s* %%", string_type[i], s.name, string_type[i], variable_values[i].symbol_name->symbol_name);
+     display_symbol_id(variable_values[i].symbol_name);
+     printf("\n");
      ++i;
    }
  }
@@ -326,8 +328,11 @@ af: AF {
   if(get_depth_control() != 0) {
     decrement_depth_control();
   }
+  if(get_depth_bloc() == 1 && type_last_bloc() == T_VOID)  {
+    printf("\t ret void\n");
+  }
   remove_bloc();
-}
+};
 
 type
 : typename pointer //{$$ = strcat($1, "*");} TODO : marche pas
@@ -361,7 +366,7 @@ vlist: ID vir vlist {
 | ID {
   elem x = create_elem($1,$<t>0);
   if(search_symbol_in_bloc(x)) {
-    printf("variable already created !");
+    yyerror("variable already created !");
   }  
   char * type_string = string_of_type(x.symbol_type);
   printf("\t %%");
@@ -417,19 +422,17 @@ fun_app : ID PO args PF
 {
   int i = function_index(function_list, $1);
   if( i == -1) {
-    printf("ID in fun_app\n");
     yyerror("symbol not found !");    
   }
   node function = function_list->nodes[i];
   if(arg_list->size != function.size ) {
-    printf("size in fun_app\n");
     yyerror("not the same size");
   }
   int j = 0;
   while (j < function.size) {
     symbol s = (function.arguments[j]).s;
     node arg = arg_list->nodes[j];
-    char * type_string = string_of_type(s.type);
+    char * type_string = string_of_type((arg.r).reg_type);
     printf("\t %%r%i = load %s, %s* %%", (arg.r).reg_id, type_string, type_string); 
     display_symbol_id(arg.name);
     printf("\n");
@@ -464,7 +467,6 @@ args : arglist
 arglist : ID VIR arglist {
   elem symbol = find_elem_from_name($1);
   if (symbol.symbol_name == NULL) {
-    printf("ID in arg_list\n");
     yyerror("symbol not found !");    
   }
   arg_list = add_registre_node(arg_list, new_reg(symbol.symbol_type), symbol.symbol_name);
@@ -473,7 +475,6 @@ arglist : ID VIR arglist {
 {
   elem symbol = find_elem_from_name($1);
   if (symbol.symbol_name == NULL) {
-    printf("ID in arg_list\n");
     yyerror("symbol not found !");    
   }
   arg_list = add_registre_node(arg_list, new_reg(symbol.symbol_type), symbol.symbol_name);
@@ -482,17 +483,37 @@ arglist : ID VIR arglist {
 aff : ID EQ exp PV {
   elem symbol = find_elem_from_name($1);
   if( symbol.symbol_type == T_VOID) {
-    printf("ID in aff %s\n", $1);
     yyerror("symbol not found !");
   }
+  if ($3.reg_type == T_VOID) {
+    yyerror("trying to aff void value");
+  }
+  registre tmp;
+  if ($3.reg_type != symbol.symbol_type) {
+
+    if( $3.reg_type == T_INT) {
+      tmp = new_reg(T_FLOAT);
+      convert_int_to_float(tmp.reg_id, $3.reg_id);
+    }
+    else {
+      tmp = new_reg(T_INT);
+      convert_float_to_int(tmp.reg_id, $3.reg_id);
+    }
+  }
+  else {
+    tmp = $3;
+  }
   char* string_type = string_of_type(symbol.symbol_type);
-  printf("\t store %s %%r%i, %s* %%",string_type, $3.reg_id, string_type);
+  printf("\t store %s %%r%i, %s* %%",string_type, tmp.reg_id, string_type);
   display_symbol_id(symbol.symbol_name);
   printf("\n");};
 
 ret : RETURN PV
 | RETURN exp PV {
   enum type return_type = type_last_bloc();
+  if(return_type == VOID) {
+    yyerror("void type returning something");
+  }
   convert_to_function_type(return_type, &$2);
   char* string_type = string_of_type(return_type);
   printf("\t ret %s %%r%i\n", string_type, $2.reg_id);};
@@ -657,14 +678,13 @@ MOINS exp %prec UNA {
 
 | exp DIV exp {
   $$ = new_reg(op_type(&$1, &$3)); 
-  char * operation_type_name[TYPE_NUMBER] = {"", "div", "fdiv"};
+  char * operation_type_name[TYPE_NUMBER] = {"", "sdiv", "fdiv"};
   printf_operation($$, $1, $3, operation_type_name, ""); }
 
 | PO exp PF {$$=$2;}
 | ID {
   elem symbol = find_elem_from_name($1);
   if(symbol.symbol_type == T_VOID) {
-    printf("ID in exp %s\n", $1);
     yyerror("symbol not found !\n");
   }
   $$ = new_reg(symbol.symbol_type);

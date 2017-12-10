@@ -4,6 +4,7 @@
 
 #define TYPE_NUMBER 3
 
+#define S_VOID "void"
 #define S_INT "i32"
 #define S_FLOAT "float" 
 

@@ -4,7 +4,7 @@ RESULTAT = resultat
 
 .PHONY	: src_make test_make resultat_make
 
-all	: src_make test_make resultat_make
+all	: src_make
 
 src_make:
 	$(MAKE) -sC $(SOURCE)

@@ -33,6 +33,7 @@ L[a-zA-Z_]
 "int"    {return INT;}
 "float"  {return FLOAT;}
 "void"   {return VOID;}
+"&"      {return ADDRESS;}
 
 [$]?{L}({L}|{D})* { yylval.sid=strdup(yytext); return(ID); }
 {D}+    	  { yylval.n=atoi(yytext); return(CONSTANTI); }

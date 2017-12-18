@@ -251,7 +251,7 @@ sera lue comme un char * (le type de sid). */
 %token VIR PV AO AF PO PF
 %token UNTIL DO WHILE RETURN
 
-%token PLUS MOINS STAR DIV  EQ
+%token PLUS MOINS STAR DIV EQ
 %token INF EQUAL SUP DIFF
 %token AND OR NOT
 
@@ -263,6 +263,7 @@ sera lue comme un char * (le type de sid). */
 %left AND
 %nonassoc UNA    /* pseudo token pour assurer une priorite locale */
 %nonassoc ELSE
+%nonassoc ADDRESS
 
 %type <sid> fun_name
 %type <t> typename 
@@ -512,7 +513,35 @@ aff : ID EQ exp PV {
   char* string_type = string_of_type(symbol.symbol_type);
   printf("\t store %s %%r%i, %s* %%",string_type, tmp.reg_id, string_type);
   display_symbol_id(symbol.symbol_name);
+  printf("\n");}
+| STAR ID EQ exp PV {
+  elem symbol = find_elem_from_name($2);
+  if( symbol.symbol_type == T_VOID) {
+    yyerror("symbol not found in context");
+  }
+  if ($4.reg_type == T_VOID) {
+    yyerror("trying to affect an variable with void type");
+  }
+  registre tmp;
+  if ($4.reg_type != symbol.symbol_type) {
+
+    if ($4.reg_type == T_INT) {
+      tmp = new_reg(T_FLOAT);
+      convert_int_to_float(tmp.reg_id, $4.reg_id);
+    }
+    else {
+      tmp = new_reg(T_INT);
+      convert_float_to_int(tmp.reg_id, $4.reg_id);
+    }
+  }
+  else {
+    tmp = $4;
+  }
+  char* string_type = string_of_type(symbol.symbol_type);
+  printf("\t store %s %%r%i, %s* %%",string_type, tmp.reg_id, string_type);
+  display_symbol_id(symbol.symbol_name);
   printf("\n");};
+
 
 ret : RETURN PV
 | RETURN exp PV {
@@ -593,15 +622,17 @@ and: AND {
   int label_displayed;
   int label_out;
   $$ = new_double_label(); 
-  label_true = $$.one;
-  label_false = $$.two;
   if(lt[loop_depth] != T_DO_WHILE) {
+    label_true = $$.one;
+    label_false = $$.two;
     label_displayed = label_true;
     label_out = label_displayed + 3; // label_false du bool suivant
   }
   else {
+    label_true = $$.two;
+    label_false = $$.one;
     label_displayed = label_true;
-    label_out = label_displayed + 2; // label true du bool suivant
+    label_out = label_displayed + 1; // label true du bool suivant
   }
   printf("\t br i1 %%r%i, label %%L%i, label %%L%i\n", $<reg>0.reg_id,label_true, label_false);
   printf("L%i:\n", label_false);
@@ -703,6 +734,16 @@ MOINS exp %prec UNA {
 | CONSTANTF {$$ = new_reg(T_FLOAT);
   printf("\t %%r%i = fadd float %s, %s \n", $$.reg_id, float_to_hex($1), float_to_hex(0.0)); } 
 | fun_app {$$ = $1; }
+| ADDRESS ID {
+  elem symbol = find_elem_from_name($2);
+  if(symbol.symbol_type == T_VOID) {
+    yyerror("symbol not found in context");
+  }
+  $$ = new_reg(symbol.symbol_type);
+  char * type_string = string_of_type(symbol.symbol_type);
+  printf("\t %%r%i = load %s, %s* *%%", $$.reg_id, type_string, type_string); 
+  display_symbol_id(symbol.symbol_name);
+  printf("\n");}
 ;
 
 

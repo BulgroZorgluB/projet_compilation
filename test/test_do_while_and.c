@@ -9,6 +9,6 @@
   do {
     n = n + 1;
     i = i - 1;
-  } while (i > 0 && i != j) ;
+  } while (i > 0 && i != j && j > n) ;
   return n;
 }

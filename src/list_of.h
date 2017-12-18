@@ -16,8 +16,6 @@ struct node_list_of{
   int size_max;
 };
 
-
-
 typedef struct {
   enum elem_type e_t;
   node *nodes;
